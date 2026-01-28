@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Service Portal - Multi-Store Shopify</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+        .header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(71, 85, 105, 0.5);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-logout { background: rgba(71, 85, 105, 0.5); color: white; }
+        .btn-shopify { background: #96bf48; color: white; padding: 0.75rem 1rem; font-size: 0.875rem; }
+        .btn-shopify:hover { background: #7da73d; }
+        .btn-shopify:disabled { opacity: 0.5; cursor: not-allowed; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        .card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: #cbd5e1; font-size: 0.875rem; }
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            border-radius: 8px;
+            color: white;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        .form-control:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .filter-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 1rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: rgba(30, 41, 59, 0.8); padding: 1rem; text-align: left; font-weight: 600; font-size: 0.875rem; }
+        td { padding: 1rem; border-bottom: 1px solid rgba(71, 85, 105, 0.3); font-size: 0.875rem; }
+        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .badge-warning { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .badge-danger { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .error { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
+        .success { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.5); color: #10b981; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
+        .info { background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #60a5fa; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
+        .role-btn {
+            padding: 2rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .role-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-4px);
+        }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { padding: 1.5rem; border-radius: 12px; }
+        .stat-value { font-size: 2rem; font-weight: bold; margin-top: 0.5rem; }
+        .stat-label { font-size: 0.875rem; opacity: 0.8; }
+        .radio-group { display: flex; flex-direction: column; gap: 0.75rem; }
+        .radio-option {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .radio-option:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+        .radio-option input[type="radio"] {
+            margin-right: 0.75rem;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.5);
+        }
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            color: white;
+            border-bottom-color: #3b82f6;
+        }
+        .yes-no-toggle {
+            display: flex;
+            gap: 1rem;
+        }
+        .toggle-btn {
+            flex: 1;
+            padding: 0.75rem;
+            background: rgba(15, 23, 42, 0.4);
+            border: 2px solid rgba(71, 85, 105, 0.5);
+            border-radius: 8px;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            font-weight: 600;
+        }
+        .toggle-btn:hover {
+            border-color: #3b82f6;
+        }
+        .toggle-btn.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+            color: white;
+        }
+        .input-with-button {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-start;
+        }
+        .input-with-button input {
+            flex: 1;
+        }
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .shopify-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(150, 191, 72, 0.2);
+            border: 1px solid rgba(150, 191, 72, 0.5);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: #96bf48;
+            margin-bottom: 1rem;
+        }
+        .store-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        .store-us-ca { background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #60a5fa; }
+        .store-india { background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.5); color: #fb923c; }
+        .store-international { background: rgba(168, 85, 247, 0.2); border: 1px solid rgba(168, 85, 247, 0.5); color: #c084fc; }
+        .grid-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <script>
+        // 🔧 MULTI-STORE SHOPIFY CONFIGURATION
+        const SHOPIFY_STORES = {
+            us_canada: {
+                name: 'US & Canada Store',
+                storeUrl: 'thetangyshop.myshopify.com',
+                accessToken: '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',
+                countries: ['United States', 'Canada']
+            },
+            india: {
+                name: 'India Store',
+                storeUrl: 'tangyshopindia.myshopify.com',
+                accessToken: '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',
+                countries: ['India']
+            },
+            international: {
+                name: 'International Store',
+                storeUrl: 'tangyshopinternational.myshopify.com',
+                accessToken: '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',
+                countries: ['United Kingdom', 'Australia', 'Germany', 'France', 'Spain', 'Italy', 
+                           'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden', 'Norway', 
+                           'Denmark', 'Finland', 'Poland', 'China', 'Japan', 'South Korea', 
+                           'Singapore', 'Brazil', 'Mexico', 'Argentina', 'United Arab Emirates', 
+                           'Saudi Arabia', 'South Africa', 'Turkey', 'New Zealand', 'Other']
+            }
+        };
+        
+        const SHOPIFY_CONFIG = {
+            enabled: true  // Set to false to disable Shopify integration
+        };
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDlBD0g4nBLXAzG1xV-sQp6VHdKxdwWsuk",
+            authDomain: "employee-management-36cb3.firebaseapp.com",
+            projectId: "employee-management-36cb3",
+            storageBucket: "employee-management-36cb3.firebasestorage.app",
+            messagingSenderId: "564697114640",
+            appId: "1:564697114640:web:6d6d0c96d02e4e6b4a2ecc"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Currency mapping
+        const CURRENCY_BY_COUNTRY = {
+            'United States': { symbol: '$', example: '$99.99', code: 'USD' },
+            'Canada': { symbol: 'CAD $', example: 'CAD $99.99', code: 'CAD' },
+            'United Kingdom': { symbol: '£', example: '£99.99', code: 'GBP' },
+            'Australia': { symbol: 'AUD $', example: 'AUD $99.99', code: 'AUD' },
+            'Germany': { symbol: '€', example: '€99.99', code: 'EUR' },
+            'France': { symbol: '€', example: '€99.99', code: 'EUR' },
+            'India': { symbol: '₹', example: '₹9999', code: 'INR' },
+            'Mexico': { symbol: 'MXN $', example: 'MXN $999.99', code: 'MXN' },
+            'Japan': { symbol: '¥', example: '¥9999', code: 'JPY' },
+            'Other': { symbol: '$', example: '$99.99', code: 'USD' }
+        };
+        
+        // Country code mapping
+        const COUNTRY_CODE_MAP = {
+            'US': 'United States',
+            'CA': 'Canada',
+            'GB': 'United Kingdom',
+            'AU': 'Australia',
+            'DE': 'Germany',
+            'FR': 'France',
+            'IN': 'India',
+            'MX': 'Mexico',
+            'JP': 'Japan',
+            'CN': 'China'
+        };
+        
+        const DEFAULT_RESOLUTION_TEMPLATES = {
+            "Order Tracking Inquiry": [
+                "Sent tracking details to customer via email",
+                "Provided tracking number and estimated delivery date",
+                "Updated customer on current shipment status",
+                "Explained delay and provided new delivery estimate"
+            ],
+            "Order Cancellation": [
+                "Order successfully cancelled, refund initiated",
+                "Order cancelled, refund will process in 3-5 business days",
+                "Order already shipped, provided return instructions",
+                "Cancellation completed, confirmed via email"
+            ],
+            "Add/Remove/Change items in order": [
+                "Successfully added/removed items from order",
+                "Order modified, sent updated confirmation",
+                "Items updated, no additional charges",
+                "Changes applied, new total communicated to customer"
+            ]
+        };
+        
+        const Storage = {
+            getOwner: () => {
+                const stored = localStorage.getItem('owner');
+                return stored ? JSON.parse(stored) : { 
+                    username: 'admin', 
+                    password: 'admin123'
+                };
+            },
+            getResolutionTemplates: () => {
+                const stored = localStorage.getItem('resolutionTemplates');
+                return stored ? JSON.parse(stored) : DEFAULT_RESOLUTION_TEMPLATES;
+            },
+            saveResolutionTemplates: (templates) => {
+                localStorage.setItem('resolutionTemplates', JSON.stringify(templates));
+            }
+        };
+        
+        // Helper function to determine which store to use based on country
+        const getStoreForCountry = (country) => {
+            if (SHOPIFY_STORES.us_canada.countries.includes(country)) {
+                return { key: 'us_canada', ...SHOPIFY_STORES.us_canada };
+            }
+            if (SHOPIFY_STORES.india.countries.includes(country)) {
+                return { key: 'india', ...SHOPIFY_STORES.india };
+            }
+            return { key: 'international', ...SHOPIFY_STORES.international };
+        };
+        
+        // Backend Proxy Server URL
+        const PROXY_URL = 'https://shopify-proxy-server-production.up.railway.app';
+        
+        // Shopify API Functions (now using backend proxy)
+        const ShopifyAPI = {
+            async fetchOrder(orderNumber, country) {
+                if (!SHOPIFY_CONFIG.enabled) {
+                    throw new Error('Shopify integration is disabled');
+                }
+                
+                if (!country) {
+                    throw new Error('Please select a country first to determine which store to query');
+                }
+                
+                try {
+                    // Call backend proxy server
+                    const response = await fetch(`${PROXY_URL}/api/fetch-order`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            orderNumber: orderNumber,
+                            country: country
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `Server error: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    return data;
+                } catch (error) {
+                    if (error.message.includes('Failed to fetch')) {
+                        throw new Error('Cannot connect to proxy server. Please check if the server is running.');
+                    }
+                    throw error;
+                }
+            },
+            
+            parseOrder(order) {
+                const shipping = order.shipping_address || {};
+                const customer = order.customer || {};
+                const tracking = order.fulfillments && order.fulfillments[0] 
+                    ? order.fulfillments[0].tracking_number 
+                    : '';
+                
+                return {
+                    customerName: shipping.name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || '',
+                    email: order.email || customer.email || '',
+                    phoneNumber: shipping.phone || customer.phone || '',
+                    country: COUNTRY_CODE_MAP[shipping.country_code] || shipping.country || 'Other',
+                    orderNumber: order.name || '#' + order.order_number,
+                    trackingId: tracking,
+                    orderStatus: order.financial_status,
+                    totalAmount: order.total_price
+                };
+            }
+        };
+        
+        function App() {
+            const [currentUser, setCurrentUser] = useState(null);
+            const [userRole, setUserRole] = useState(null);
+            const [loginView, setLoginView] = useState(null);
+            const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+            const [error, setError] = useState('');
+            const [success, setSuccess] = useState('');
+            const [employees, setEmployees] = useState([]);
+            const [callLogs, setCallLogs] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [loadingShopify, setLoadingShopify] = useState(false);
+            const [managerTab, setManagerTab] = useState('calls');
+            const [employeeTab, setEmployeeTab] = useState('log');
+            const [selectedStore, setSelectedStore] = useState(null);
+            
+            const [resolutionTemplates, setResolutionTemplates] = useState(Storage.getResolutionTemplates());
+            
+            const [formData, setFormData] = useState({
+                customerName: '', orderNumber: '', email: '', phoneNumber: '', country: '',
+                reasonForCall: '', otherReason: '', resolution: '', 
+                customResolution: '', resolutionStatus: 'pending',
+                refundIssued: 'no', refundAmount: '',
+                trackingAssigned: 'no', trackingId: '',
+                orderLoadedFromShopify: false,
+                shopifyStore: ''
+            });
+            
+            const [searchTerm, setSearchTerm] = useState('');
+            const [filterEmployee, setFilterEmployee] = useState('all');
+            const [filterDate, setFilterDate] = useState('all');
+            const [filterStatus, setFilterStatus] = useState('all');
+            const [filterStore, setFilterStore] = useState('all');
+            const [filterReason, setFilterReason] = useState('all');
+            const [filterRefund, setFilterRefund] = useState('all');
+            const [filterTracking, setFilterTracking] = useState('all');
+            const [filterDataSource, setFilterDataSource] = useState('all');
+            const [dateFrom, setDateFrom] = useState('');
+            const [dateTo, setDateTo] = useState('');
+            
+            useEffect(() => {
+                loadEmployees();
+            }, []);
+            
+            useEffect(() => {
+                if (userRole === 'employee') {
+                    loadEmployeeCallLogs();
+                }
+            }, [userRole, currentUser]);
+            
+            // Update selected store when country changes
+            useEffect(() => {
+                if (formData.country) {
+                    const store = getStoreForCountry(formData.country);
+                    setSelectedStore(store);
+                }
+            }, [formData.country]);
+            
+            const loadEmployees = async () => {
+                try {
+                    const snapshot = await db.collection('employees').get();
+                    const emps = [];
+                    snapshot.forEach(doc => emps.push({...doc.data(), id: doc.id}));
+                    setEmployees(emps);
+                } catch (error) {
+                    console.error("Error loading employees:", error);
+                }
+            };
+            
+            const loadData = async () => {
+                setLoading(true);
+                try {
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                    const snapshot = await db.collection('customerCallLogs')
+                        .where('timestamp', '>=', thirtyDaysAgo.toISOString())
+                        .orderBy('timestamp', 'desc')
+                        .get();
+                    const logs = [];
+                    snapshot.forEach(doc => logs.push(doc.data()));
+                    setCallLogs(logs);
+                } catch (error) {
+                    console.error("Error loading data:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            const loadEmployeeCallLogs = async () => {
+                if (!currentUser || !currentUser.id) return;
+                setLoading(true);
+                try {
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                    const snapshot = await db.collection('customerCallLogs')
+                        .where('agentId', '==', currentUser.id)
+                        .where('timestamp', '>=', thirtyDaysAgo.toISOString())
+                        .orderBy('timestamp', 'desc')
+                        .get();
+                    const logs = [];
+                    snapshot.forEach(doc => logs.push(doc.data()));
+                    setCallLogs(logs);
+                } catch (error) {
+                    console.error("Error loading employee call logs:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            const handleLoadOrderFromShopify = async () => {
+                if (!formData.orderNumber) {
+                    setError('Please enter an order number first');
+                    return;
+                }
+                
+                if (!formData.country) {
+                    setError('Please select a country first to determine which store to query');
+                    return;
+                }
+                
+                setError('');
+                setSuccess('');
+                setLoadingShopify(true);
+                
+                try {
+                    const orderData = await ShopifyAPI.fetchOrder(formData.orderNumber, formData.country);
+                    setFormData({
+                        ...formData,
+                        customerName: orderData.customerName,
+                        email: orderData.email,
+                        phoneNumber: orderData.phoneNumber,
+                        country: orderData.country || formData.country,
+                        orderNumber: orderData.orderNumber,
+                        trackingId: orderData.trackingId,
+                        trackingAssigned: orderData.trackingId ? 'yes' : 'no',
+                        orderLoadedFromShopify: true,
+                        shopifyStore: orderData.storeName
+                    });
+                    setSuccess(`✅ Order loaded from ${orderData.storeName} successfully!`);
+                    setTimeout(() => setSuccess(''), 4000);
+                } catch (err) {
+                    setError(err.message || 'Failed to load order from Shopify');
+                } finally {
+                    setLoadingShopify(false);
+                }
+            };
+            
+            const handleEmployeeLogin = async (e) => {
+                e.preventDefault();
+                setError('');
+                const employee = employees.find(
+                    emp => emp.username === loginForm.username && emp.password === loginForm.password
+                );
+                if (!employee) {
+                    setError('Invalid username or password');
+                    return;
+                }
+                setCurrentUser(employee);
+                setUserRole('employee');
+                setLoginForm({ username: '', password: '' });
+            };
+            
+            const handleManagerLogin = (e) => {
+                e.preventDefault();
+                setError('');
+                const owner = Storage.getOwner();
+                if (loginForm.username === owner.username && loginForm.password === owner.password) {
+                    setCurrentUser({ name: 'Manager', username: owner.username });
+                    setUserRole('manager');
+                    setLoginForm({ username: '', password: '' });
+                    loadData();
+                } else {
+                    setError('Invalid manager credentials');
+                }
+            };
+            
+            const handleLogout = () => {
+                setCurrentUser(null);
+                setUserRole(null);
+                setLoginView(null);
+                setError('');
+                setSuccess('');
+                setLoginForm({ username: '', password: '' });
+                setSelectedStore(null);
+                setFormData({
+                    customerName: '', orderNumber: '', email: '', phoneNumber: '', country: '',
+                    reasonForCall: '', otherReason: '', resolution: '', 
+                    customResolution: '', resolutionStatus: 'pending',
+                    refundIssued: 'no', refundAmount: '',
+                    trackingAssigned: 'no', trackingId: '',
+                    orderLoadedFromShopify: false,
+                    shopifyStore: ''
+                });
+            };
+            
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError('');
+                setSuccess('');
+                
+                if (!formData.customerName || !formData.orderNumber || !formData.email || 
+                    !formData.phoneNumber || !formData.country || !formData.reasonForCall) {
+                    setError('Please fill in all required fields');
+                    return;
+                }
+                
+                if (formData.reasonForCall === 'Other' && !formData.otherReason) {
+                    setError('Please specify the reason');
+                    return;
+                }
+                
+                const finalResolution = formData.resolution === 'custom' ? formData.customResolution : formData.resolution;
+                
+                if (!finalResolution) {
+                    setError('Please select or enter a resolution');
+                    return;
+                }
+                
+                if (formData.refundIssued === 'yes' && !formData.refundAmount) {
+                    setError('Please enter refund amount');
+                    return;
+                }
+                
+                if (formData.trackingAssigned === 'yes' && !formData.trackingId) {
+                    setError('Please enter new tracking ID');
+                    return;
+                }
+                
+                const callLog = {
+                    id: Date.now(),
+                    customerName: formData.customerName,
+                    orderNumber: formData.orderNumber,
+                    email: formData.email,
+                    phoneNumber: formData.phoneNumber,
+                    country: formData.country,
+                    reasonForCall: formData.reasonForCall,
+                    otherReason: formData.otherReason,
+                    resolution: finalResolution,
+                    resolutionStatus: formData.resolutionStatus,
+                    refundIssued: formData.refundIssued,
+                    refundAmount: formData.refundIssued === 'yes' ? formData.refundAmount : '',
+                    trackingAssigned: formData.trackingAssigned,
+                    trackingId: formData.trackingAssigned === 'yes' ? formData.trackingId : '',
+                    loadedFromShopify: formData.orderLoadedFromShopify,
+                    shopifyStore: formData.shopifyStore,
+                    agentName: currentUser.name || currentUser.username,
+                    agentId: currentUser.id,
+                    timestamp: new Date().toISOString(),
+                    date: new Date().toLocaleDateString(),
+                    time: new Date().toLocaleTimeString()
+                };
+                
+                try {
+                    await db.collection('customerCallLogs').doc(callLog.id.toString()).set(callLog);
+                    setSuccess('✅ Call logged successfully!');
+                    setFormData({
+                        customerName: '', orderNumber: '', email: '', phoneNumber: '', country: '',
+                        reasonForCall: '', otherReason: '', resolution: '', 
+                        customResolution: '', resolutionStatus: 'pending',
+                        refundIssued: 'no', refundAmount: '',
+                        trackingAssigned: 'no', trackingId: '',
+                        orderLoadedFromShopify: false,
+                        shopifyStore: ''
+                    });
+                    setSelectedStore(null);
+                    setTimeout(() => setSuccess(''), 3000);
+                    loadEmployeeCallLogs();
+                } catch (error) {
+                    setError('Error saving call log: ' + error.message);
+                }
+            };
+            
+            // Rest of the component code (saveTemplates, etc.) - keeping it the same
+            const saveTemplates = () => {
+                Storage.saveResolutionTemplates(resolutionTemplates);
+                setSuccess('Templates saved successfully!');
+                setTimeout(() => setSuccess(''), 3000);
+            };
+            
+            const filteredLogs = callLogs.filter(log => {
+                // Search filter
+                if (searchTerm) {
+                    const search = searchTerm.toLowerCase();
+                    const matches = log.customerName?.toLowerCase().includes(search) ||
+                        log.orderNumber?.toLowerCase().includes(search) ||
+                        log.email?.toLowerCase().includes(search) ||
+                        log.phoneNumber?.toLowerCase().includes(search);
+                    if (!matches) return false;
+                }
+                
+                // Employee filter
+                if (filterEmployee !== 'all' && log.agentId?.toString() !== filterEmployee) return false;
+                
+                // Status filter
+                if (filterStatus !== 'all' && log.resolutionStatus !== filterStatus) return false;
+                
+                // Store/Region filter
+                if (filterStore !== 'all') {
+                    const logStore = log.shopifyStore || '';
+                    if (filterStore === 'us_canada' && !logStore.includes('US & Canada')) return false;
+                    if (filterStore === 'india' && !logStore.includes('India') && log.country !== 'India') return false;
+                    if (filterStore === 'international' && !logStore.includes('International') && log.country !== 'United Kingdom' && log.country !== 'Australia') return false;
+                }
+                
+                // Reason for Call filter
+                if (filterReason !== 'all' && log.reasonForCall !== filterReason) return false;
+                
+                // Refund filter
+                if (filterRefund !== 'all') {
+                    if (filterRefund === 'yes' && log.refundIssued !== 'yes') return false;
+                    if (filterRefund === 'no' && log.refundIssued === 'yes') return false;
+                }
+                
+                // Tracking filter
+                if (filterTracking !== 'all') {
+                    if (filterTracking === 'yes' && log.trackingAssigned !== 'yes') return false;
+                    if (filterTracking === 'no' && log.trackingAssigned === 'yes') return false;
+                }
+                
+                // Data Source filter
+                if (filterDataSource !== 'all') {
+                    if (filterDataSource === 'shopify' && !log.loadedFromShopify) return false;
+                    if (filterDataSource === 'manual' && log.loadedFromShopify) return false;
+                }
+                
+                // Date range filter (preset or custom)
+                if (filterDate === 'custom') {
+                    const logDate = new Date(log.timestamp);
+                    if (dateFrom && new Date(dateFrom) > logDate) return false;
+                    if (dateTo) {
+                        const endDate = new Date(dateTo);
+                        endDate.setHours(23, 59, 59, 999);
+                        if (endDate < logDate) return false;
+                    }
+                } else if (filterDate !== 'all') {
+                    const logDate = new Date(log.timestamp);
+                    const now = new Date();
+                    const daysDiff = Math.floor((now - logDate) / (1000 * 60 * 60 * 24));
+                    if (filterDate === 'today' && daysDiff > 0) return false;
+                    if (filterDate === 'week' && daysDiff > 7) return false;
+                    if (filterDate === 'month' && daysDiff > 30) return false;
+                }
+                
+                return true;
+            });
+            
+            const totalCalls = callLogs.length;
+            const resolvedCalls = callLogs.filter(log => log.resolutionStatus === 'resolved').length;
+            const pendingCalls = callLogs.filter(log => log.resolutionStatus === 'pending').length;
+            const escalatedCalls = callLogs.filter(log => log.resolutionStatus === 'escalated').length;
+            
+            const currentTemplates = formData.reasonForCall && formData.reasonForCall !== 'Other' 
+                ? resolutionTemplates[formData.reasonForCall] || [] 
+                : [];
+            
+            const isShopifyConfigured = SHOPIFY_CONFIG.enabled;
+            const canLoadOrder = formData.orderNumber && formData.country && !loadingShopify;
+            
+            if (!currentUser) {
+                return (
+                    <div>
+                        <div className="header">
+                            <h1>📞 Customer Service Portal</h1>
+                            {SHOPIFY_CONFIG.enabled && (
+                                <div style={{fontSize: '0.875rem', color: '#96bf48'}}>
+                                    🛍️ Multi-Store Shopify Enabled
+                                </div>
+                            )}
+                        </div>
+                        <div className="container">
+                            <div className="card" style={{maxWidth: '500px', margin: '4rem auto'}}>
+                                <h2 style={{marginBottom: '1rem', textAlign: 'center'}}>Welcome</h2>
+                                <p style={{textAlign: 'center', color: '#94a3b8', marginBottom: '2rem'}}>
+                                    Select your role to continue
+                                </p>
+                                
+                                {!loginView && (
+                                    <div style={{display: 'flex', gap: '1rem'}}>
+                                        <div className="role-btn" onClick={() => setLoginView('employee')} style={{flex: 1}}>
+                                            <h3>👤 Employee</h3>
+                                            <p style={{color: '#94a3b8', fontSize: '0.875rem', marginTop: '0.5rem'}}>Log customer calls</p>
+                                        </div>
+                                        <div className="role-btn" onClick={() => setLoginView('manager')} style={{flex: 1}}>
+                                            <h3>👔 Manager</h3>
+                                            <p style={{color: '#94a3b8', fontSize: '0.875rem', marginTop: '0.5rem'}}>View all calls</p>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {loginView === 'employee' && (
+                                    <div>
+                                        <h3 style={{marginBottom: '1.5rem', textAlign: 'center'}}>Employee Login</h3>
+                                        {error && <div className="error">{error}</div>}
+                                        <form onSubmit={handleEmployeeLogin}>
+                                            <div className="form-group">
+                                                <label>Username</label>
+                                                <input type="text" className="form-control" placeholder="Enter your username" value={loginForm.username} onChange={(e) => setLoginForm({...loginForm, username: e.target.value})} required />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Password</label>
+                                                <input type="password" className="form-control" placeholder="Enter your password" value={loginForm.password} onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} required />
+                                            </div>
+                                            <button type="submit" className="btn btn-primary" style={{width: '100%', marginBottom: '0.5rem'}}>Login</button>
+                                            <button type="button" className="btn btn-logout" style={{width: '100%'}} onClick={() => {setLoginView(null); setError('');}}>Back</button>
+                                        </form>
+                                    </div>
+                                )}
+                                
+                                {loginView === 'manager' && (
+                                    <div>
+                                        <h3 style={{marginBottom: '1.5rem', textAlign: 'center'}}>Manager Login</h3>
+                                        {error && <div className="error">{error}</div>}
+                                        <form onSubmit={handleManagerLogin}>
+                                            <div className="form-group">
+                                                <label>Username</label>
+                                                <input type="text" className="form-control" placeholder="Enter manager username" value={loginForm.username} onChange={(e) => setLoginForm({...loginForm, username: e.target.value})} required />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Password</label>
+                                                <input type="password" className="form-control" placeholder="Enter manager password" value={loginForm.password} onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} required />
+                                            </div>
+                                            <p style={{color: '#94a3b8', fontSize: '0.75rem', marginBottom: '1rem', textAlign: 'center'}}>Default: admin / admin123</p>
+                                            <button type="submit" className="btn btn-success" style={{width: '100%', marginBottom: '0.5rem'}}>Login as Manager</button>
+                                            <button type="button" className="btn btn-logout" style={{width: '100%'}} onClick={() => {setLoginView(null); setError('');}}>Back</button>
+                                        </form>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            if (userRole === 'employee') {
+                return (
+                    <div>
+                        <div className="header">
+                            <h1>📞 Customer Service - Agent</h1>
+                            <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                                {SHOPIFY_CONFIG.enabled && (
+                                    <div style={{fontSize: '0.75rem', color: '#96bf48'}}>
+                                        🛍️ 3 Stores Connected
+                                    </div>
+                                )}
+                                <span>Welcome, {currentUser.name || currentUser.username}</span>
+                                <button className="btn btn-logout" onClick={handleLogout}>Logout</button>
+                            </div>
+                        </div>
+                        <div className="container">
+                            <div className="tabs">
+                                <button className={`tab ${employeeTab === 'log' ? 'active' : ''}`} onClick={() => setEmployeeTab('log')}>
+                                    📝 Log Call
+                                </button>
+                                <button className={`tab ${employeeTab === 'history' ? 'active' : ''}`} onClick={() => setEmployeeTab('history')}>
+                                    📊 My Call History ({callLogs.length})
+                                </button>
+                            </div>
+                            
+                            {employeeTab === 'log' ? (
+                                <div className="card" style={{maxWidth: '1000px', margin: '0 auto'}}>
+                                    <h2 style={{marginBottom: '1.5rem'}}>Log Customer Call</h2>
+                                    
+                                    {SHOPIFY_CONFIG.enabled && (
+                                        <div className="shopify-badge">
+                                            🛍️ Multi-Store Integration Active
+                                            <span style={{marginLeft: '0.5rem', opacity: 0.8}}>• Select country to auto-route to correct store</span>
+                                        </div>
+                                    )}
+                                    
+                                    {error && <div className="error">{error}</div>}
+                                    {success && <div className="success">{success}</div>}
+                                    
+                                    <form onSubmit={handleSubmit}>
+                                        <div className="grid-3">
+                                            <div className="form-group">
+                                                <label>Order Number *</label>
+                                                <input 
+                                                    className="form-control" 
+                                                    placeholder="#1234 or 1234" 
+                                                    value={formData.orderNumber} 
+                                                    onChange={(e) => setFormData({...formData, orderNumber: e.target.value})}
+                                                />
+                                            </div>
+                                            
+                                            <div className="form-group">
+                                                <label>Country * (Determines Store)</label>
+                                                <select 
+                                                    className="form-control" 
+                                                    value={formData.country} 
+                                                    onChange={(e) => setFormData({...formData, country: e.target.value})}
+                                                    disabled={loadingShopify}
+                                                >
+                                                    <option value="">Select country...</option>
+                                                    <optgroup label="🇺🇸 US & Canada Store">
+                                                        <option>United States</option>
+                                                        <option>Canada</option>
+                                                    </optgroup>
+                                                    <optgroup label="🇮🇳 India Store">
+                                                        <option>India</option>
+                                                    </optgroup>
+                                                    <optgroup label="🌍 International Store">
+                                                        <option>United Kingdom</option>
+                                                        <option>Australia</option>
+                                                        <option>Germany</option>
+                                                        <option>France</option>
+                                                        <option>Mexico</option>
+                                                        <option>Japan</option>
+                                                        <option>Other</option>
+                                                    </optgroup>
+                                                </select>
+                                                {selectedStore && (
+                                                    <div className={`store-indicator store-${selectedStore.key.replace('_', '-')}`}>
+                                                        🛍️ {selectedStore.name}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="form-group">
+                                                <label style={{opacity: 0}}>Action</label>
+                                                {SHOPIFY_CONFIG.enabled && (
+                                                    <button 
+                                                        type="button" 
+                                                        className="btn btn-shopify"
+                                                        onClick={handleLoadOrderFromShopify}
+                                                        disabled={!canLoadOrder}
+                                                        style={{width: '100%', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'}}
+                                                    >
+                                                        {loadingShopify ? (
+                                                            <>
+                                                                <div className="spinner"></div>
+                                                                <span>Loading...</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                🛍️ Load Order
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        {SHOPIFY_CONFIG.enabled && (
+                                            <p style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '-0.5rem', marginBottom: '1rem'}}>
+                                                💡 Enter order number and select country, then click "Load Order" to auto-fill customer details
+                                            </p>
+                                        )}
+                                        
+                                        <div className="grid-2">
+                                            <div className="form-group">
+                                                <label>Customer Name *</label>
+                                                <input 
+                                                    className="form-control" 
+                                                    placeholder="John Doe" 
+                                                    value={formData.customerName} 
+                                                    onChange={(e) => setFormData({...formData, customerName: e.target.value})}
+                                                    disabled={loadingShopify}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Email *</label>
+                                                <input 
+                                                    type="email" 
+                                                    className="form-control" 
+                                                    placeholder="customer@email.com" 
+                                                    value={formData.email} 
+                                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                                    disabled={loadingShopify}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Phone *</label>
+                                                <input 
+                                                    className="form-control" 
+                                                    placeholder="+1 (555) 123-4567" 
+                                                    value={formData.phoneNumber} 
+                                                    onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                                                    disabled={loadingShopify}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Reason for Call *</label>
+                                                <select className="form-control" value={formData.reasonForCall} onChange={(e) => setFormData({...formData, reasonForCall: e.target.value, resolution: '', customResolution: ''})}>
+                                                    <option value="">Select...</option>
+                                                    <option>Order Tracking Inquiry</option>
+                                                    <option>Order Cancellation</option>
+                                                    <option>Add/Remove/Change items in order</option>
+                                                    <option>Other</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        {formData.reasonForCall === 'Other' && (
+                                            <div className="form-group">
+                                                <label>Specify Reason *</label>
+                                                <textarea className="form-control" rows="3" placeholder="Explain the reason..." value={formData.otherReason} onChange={(e) => setFormData({...formData, otherReason: e.target.value})} />
+                                            </div>
+                                        )}
+                                        
+                                        {formData.reasonForCall && formData.reasonForCall !== 'Other' && currentTemplates.length > 0 && (
+                                            <div className="form-group">
+                                                <label>Resolution / How was it resolved? *</label>
+                                                <div className="radio-group">
+                                                    {currentTemplates.map((template, index) => (
+                                                        <label key={index} className="radio-option">
+                                                            <input
+                                                                type="radio"
+                                                                name="resolution"
+                                                                value={template}
+                                                                checked={formData.resolution === template}
+                                                                onChange={(e) => setFormData({...formData, resolution: e.target.value, customResolution: ''})}
+                                                            />
+                                                            <span>{template}</span>
+                                                        </label>
+                                                    ))}
+                                                    <label className="radio-option">
+                                                        <input
+                                                            type="radio"
+                                                            name="resolution"
+                                                            value="custom"
+                                                            checked={formData.resolution === 'custom'}
+                                                            onChange={() => setFormData({...formData, resolution: 'custom'})}
+                                                        />
+                                                        <span>Custom (write your own)</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {(formData.resolution === 'custom' || formData.reasonForCall === 'Other') && (
+                                            <div className="form-group">
+                                                <label>Custom Resolution *</label>
+                                                <textarea className="form-control" rows="4" placeholder="Describe how the customer's issue was resolved..." value={formData.customResolution} onChange={(e) => setFormData({...formData, customResolution: e.target.value})} />
+                                            </div>
+                                        )}
+                                        
+                                        <div className="grid-2">
+                                            <div className="form-group">
+                                                <label>Any refund issued? *</label>
+                                                <div className="yes-no-toggle">
+                                                    <button
+                                                        type="button"
+                                                        className={`toggle-btn ${formData.refundIssued === 'no' ? 'active' : ''}`}
+                                                        onClick={() => setFormData({...formData, refundIssued: 'no', refundAmount: ''})}
+                                                    >
+                                                        No
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={`toggle-btn ${formData.refundIssued === 'yes' ? 'active' : ''}`}
+                                                        onClick={() => setFormData({...formData, refundIssued: 'yes'})}
+                                                    >
+                                                        Yes
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            
+                                            {formData.refundIssued === 'yes' && (
+                                                <div className="form-group">
+                                                    <label>Refund Amount *</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-control"
+                                                        placeholder={formData.country && CURRENCY_BY_COUNTRY[formData.country] 
+                                                            ? CURRENCY_BY_COUNTRY[formData.country].example 
+                                                            : '$99.99'}
+                                                        value={formData.refundAmount}
+                                                        onChange={(e) => setFormData({...formData, refundAmount: e.target.value})}
+                                                    />
+                                                    {formData.country && CURRENCY_BY_COUNTRY[formData.country] && (
+                                                        <p style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem'}}>
+                                                            Currency: {CURRENCY_BY_COUNTRY[formData.country].symbol} ({formData.country})
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="grid-2">
+                                            <div className="form-group">
+                                                <label>Any new tracking assigned? *</label>
+                                                <div className="yes-no-toggle">
+                                                    <button
+                                                        type="button"
+                                                        className={`toggle-btn ${formData.trackingAssigned === 'no' ? 'active' : ''}`}
+                                                        onClick={() => setFormData({...formData, trackingAssigned: 'no', trackingId: ''})}
+                                                    >
+                                                        No
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={`toggle-btn ${formData.trackingAssigned === 'yes' ? 'active' : ''}`}
+                                                        onClick={() => setFormData({...formData, trackingAssigned: 'yes'})}
+                                                    >
+                                                        Yes
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            
+                                            {formData.trackingAssigned === 'yes' && (
+                                                <div className="form-group">
+                                                    <label>New Tracking ID *</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-control"
+                                                        placeholder="1Z999AA10123456784"
+                                                        value={formData.trackingId}
+                                                        onChange={(e) => setFormData({...formData, trackingId: e.target.value})}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="form-group">
+                                            <label>Resolution Status *</label>
+                                            <select className="form-control" value={formData.resolutionStatus} onChange={(e) => setFormData({...formData, resolutionStatus: e.target.value})}>
+                                                <option value="resolved">✅ Resolved</option>
+                                                <option value="pending">⏳ Pending</option>
+                                                <option value="escalated">⚠️ Escalated</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <button type="submit" className="btn btn-success" style={{width: '100%', padding: '1rem', fontSize: '1.125rem'}}>
+                                            ✅ Log Customer Call
+                                        </button>
+                                    </form>
+                                </div>
+                            ) : (
+                                <div className="card">
+                                    <h2 style={{marginBottom: '1.5rem'}}>My Call History - Last 30 Days</h2>
+                                    {loading && <div className="info">Loading call history...</div>}
+                                    {!loading && callLogs.length === 0 && (
+                                        <div className="info">No calls logged yet. Start logging calls from the "Log Call" tab!</div>
+                                    )}
+                                    {!loading && callLogs.length > 0 && (
+                                        <div style={{overflowX: 'auto'}}>
+                                            <table>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Date/Time</th>
+                                                        <th>Customer</th>
+                                                        <th>Order #</th>
+                                                        <th>Country</th>
+                                                        <th>Reason</th>
+                                                        <th>Resolution</th>
+                                                        <th>Refund</th>
+                                                        <th>Tracking</th>
+                                                        <th>Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {callLogs.map((log, index) => (
+                                                        <tr key={index}>
+                                                            <td>{log.date}<br/><small>{log.time}</small></td>
+                                                            <td>
+                                                                <strong>{log.customerName}</strong><br/>
+                                                                <small>{log.email}</small><br/>
+                                                                <small>{log.phoneNumber}</small>
+                                                            </td>
+                                                            <td>{log.orderNumber}</td>
+                                                            <td>{log.country}</td>
+                                                            <td>{log.reasonForCall === 'Other' ? log.otherReason : log.reasonForCall}</td>
+                                                            <td>{log.resolution}</td>
+                                                            <td>
+                                                                {log.refundIssued === 'yes' ? (
+                                                                    <span style={{color: '#10b981'}}>✅ {log.refundAmount}</span>
+                                                                ) : (
+                                                                    <span style={{color: '#6b7280'}}>No</span>
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                {log.trackingAssigned === 'yes' ? (
+                                                                    <span style={{color: '#10b981'}}>✅ {log.trackingId}</span>
+                                                                ) : (
+                                                                    <span style={{color: '#6b7280'}}>No</span>
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                {log.resolutionStatus === 'resolved' && <span className="badge badge-success">Resolved</span>}
+                                                                {log.resolutionStatus === 'pending' && <span className="badge badge-warning">Pending</span>}
+                                                                {log.resolutionStatus === 'escalated' && <span className="badge badge-danger">Escalated</span>}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+            
+            return (
+                <div>
+                    <div className="header">
+                        <h1>📊 Customer Service - Manager Dashboard</h1>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                            {SHOPIFY_CONFIG.enabled && (
+                                <div style={{fontSize: '0.75rem', color: '#96bf48'}}>
+                                    🛍️ 3 Stores Connected
+                                </div>
+                            )}
+                            <span>Welcome, {currentUser.name}</span>
+                            <button className="btn btn-logout" onClick={handleLogout}>Logout</button>
+                        </div>
+                    </div>
+                    <div className="container">
+                        <div className="tabs">
+                            <button className={`tab ${managerTab === 'calls' ? 'active' : ''}`} onClick={() => { setManagerTab('calls'); loadData(); }}>
+                                📞 Call Logs ({callLogs.length})
+                            </button>
+                            <button className={`tab ${managerTab === 'templates' ? 'active' : ''}`} onClick={() => setManagerTab('templates')}>
+                                📝 Resolution Templates
+                            </button>
+                        </div>
+                        
+                        {managerTab === 'calls' && (
+                            <div>
+                                <div className="stats-grid">
+                                    <div className="stat-card" style={{background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)'}}>
+                                        <div className="stat-label">Total Calls</div>
+                                        <div className="stat-value" style={{color: '#3b82f6'}}>{totalCalls}</div>
+                                    </div>
+                                    <div className="stat-card" style={{background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)'}}>
+                                        <div className="stat-label">Resolved</div>
+                                        <div className="stat-value" style={{color: '#10b981'}}>{resolvedCalls}</div>
+                                    </div>
+                                    <div className="stat-card" style={{background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)'}}>
+                                        <div className="stat-label">Pending</div>
+                                        <div className="stat-value" style={{color: '#fbbf24'}}>{pendingCalls}</div>
+                                    </div>
+                                    <div className="stat-card" style={{background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)'}}>
+                                        <div className="stat-label">Escalated</div>
+                                        <div className="stat-value" style={{color: '#ef4444'}}>{escalatedCalls}</div>
+                                    </div>
+                                </div>
+                                
+                                <div className="card">
+                                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+                                        <h2 style={{margin: 0}}>🎯 Filters</h2>
+                                        <button 
+                                            className="btn btn-logout" 
+                                            onClick={() => {
+                                                setSearchTerm('');
+                                                setFilterEmployee('all');
+                                                setFilterDate('all');
+                                                setFilterStatus('all');
+                                                setFilterStore('all');
+                                                setFilterReason('all');
+                                                setFilterRefund('all');
+                                                setFilterTracking('all');
+                                                setFilterDataSource('all');
+                                                setDateFrom('');
+                                                setDateTo('');
+                                            }}
+                                            style={{padding: '0.5rem 1rem', fontSize: '0.875rem'}}
+                                        >
+                                            Clear All Filters
+                                        </button>
+                                    </div>
+                                    
+                                    {/* Row 1: Basic Filters */}
+                                    <div className="filter-grid">
+                                        <div className="form-group">
+                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Search</label>
+                                            <input type="text" className="form-control" placeholder="Customer, order, email, phone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                        </div>
+                                        <div className="form-group">
+                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Agent</label>
+                                            <select className="form-control" value={filterEmployee} onChange={(e) => setFilterEmployee(e.target.value)}>
+                                                <option value="all">All Agents</option>
+                                                {employees.map(emp => (
+                                                    <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Date Range</label>
+                                            <select className="form-control" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}>
+                                                <option value="all">All Time</option>
+                                                <option value="today">Today</option>
+                                                <option value="week">This Week</option>
+                                                <option value="month">This Month</option>
+                                                <option value="custom">Custom Range...</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Status</label>
+                                            <select className="form-control" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                                                <option value="all">All Status</option>
+                                                <option value="resolved">✅ Resolved</option>
+                                                <option value="pending">⏳ Pending</option>
+                                                <option value="escalated">⚠️ Escalated</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Custom Date Range Pickers */}
+                                    {filterDate === 'custom' && (
+                                        <div className="grid-2" style={{marginTop: '0.5rem', marginBottom: '0.5rem'}}>
+                                            <div className="form-group">
+                                                <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>From Date</label>
+                                                <input type="date" className="form-control" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>To Date</label>
+                                                <input type="date" className="form-control" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Row 2: Advanced Filters */}
+                                    <div className="filter-grid" style={{marginTop: '0.5rem'}}>
+                                        <div className="form-group">
+                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Store/Region</label>
+                                            <select className="form-control" value={filterStore} onChange={(e) => setFilterStore(e.target.value)}>
+                                                <option value="all">All Stores</option>
+                                                <option value="us_canada">🇺🇸 US & Canada</option>
+                                                <option value="india">🇮🇳 India</option>
+                                                <option value="international">🌍 International</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Reason</label>
+                                            <select className="form-control" value={filterReason} onChange={(e) => setFilterReason(e.target.value)}>
+                                                <option value="all">All Reasons</option>
+                                                <option value="Order Tracking Inquiry">Order Tracking</option>
+                                                <option value="Order Cancellation">Order Cancellation</option>
+                                                <option value="Add/Remove/Change items in order">Add/Remove/Change</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Refund</label>
+                                            <select className="form-control" value={filterRefund} onChange={(e) => setFilterRefund(e.target.value)}>
+                                                <option value="all">All</option>
+                                                <option value="yes">✅ Refunded</option>
+                                                <option value="no">No Refund</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Tracking</label>
+                                            <select className="form-control" value={filterTracking} onChange={(e) => setFilterTracking(e.target.value)}>
+                                                <option value="all">All</option>
+                                                <option value="yes">✅ New Tracking</option>
+                                                <option value="no">No New Tracking</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Row 3: Data Source Filter */}
+                                    <div style={{marginTop: '0.5rem'}}>
+                                        <div className="form-group">
+                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Data Source</label>
+                                            <select className="form-control" value={filterDataSource} onChange={(e) => setFilterDataSource(e.target.value)} style={{maxWidth: '300px'}}>
+                                                <option value="all">All Sources</option>
+                                                <option value="shopify">🛍️ Shopify Auto-Fill</option>
+                                                <option value="manual">✍️ Manual Entry</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Active Filters Count */}
+                                    {(searchTerm || filterEmployee !== 'all' || filterDate !== 'all' || filterStatus !== 'all' || 
+                                      filterStore !== 'all' || filterReason !== 'all' || filterRefund !== 'all' || 
+                                      filterTracking !== 'all' || filterDataSource !== 'all') && (
+                                        <div style={{marginTop: '1rem', padding: '0.75rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '6px', fontSize: '0.875rem', color: '#60a5fa'}}>
+                                            🎯 Active filters applied • Showing {filteredLogs.length} of {callLogs.length} calls
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="card">
+                                    <h2 style={{marginBottom: '1rem'}}>Call Logs ({filteredLogs.length})</h2>
+                                    {loading && <div className="info">Loading...</div>}
+                                    {!loading && filteredLogs.length === 0 && (
+                                        <div className="info">No calls found matching your filters.</div>
+                                    )}
+                                    {!loading && filteredLogs.length > 0 && (
+                                        <div style={{overflowX: 'auto'}}>
+                                            <table>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Date/Time</th>
+                                                        <th>Agent</th>
+                                                        <th>Customer</th>
+                                                        <th>Order #</th>
+                                                        <th>Country</th>
+                                                        <th>Reason</th>
+                                                        <th>Resolution</th>
+                                                        <th>Refund</th>
+                                                        <th>Tracking</th>
+                                                        <th>Status</th>
+                                                        <th>Shopify</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {filteredLogs.map((log, index) => (
+                                                        <tr key={index}>
+                                                            <td>{log.date}<br/><small>{log.time}</small></td>
+                                                            <td><strong>{log.agentName}</strong></td>
+                                                            <td>
+                                                                <strong>{log.customerName}</strong><br/>
+                                                                <small>{log.email}</small><br/>
+                                                                <small>{log.phoneNumber}</small>
+                                                            </td>
+                                                            <td>{log.orderNumber}</td>
+                                                            <td>{log.country}</td>
+                                                            <td>{log.reasonForCall === 'Other' ? log.otherReason : log.reasonForCall}</td>
+                                                            <td>{log.resolution}</td>
+                                                            <td>
+                                                                {log.refundIssued === 'yes' ? (
+                                                                    <span style={{color: '#10b981'}}>✅ {log.refundAmount}</span>
+                                                                ) : (
+                                                                    <span style={{color: '#6b7280'}}>No</span>
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                {log.trackingAssigned === 'yes' ? (
+                                                                    <span style={{color: '#10b981'}}>✅ {log.trackingId}</span>
+                                                                ) : (
+                                                                    <span style={{color: '#6b7280'}}>No</span>
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                {log.resolutionStatus === 'resolved' && <span className="badge badge-success">Resolved</span>}
+                                                                {log.resolutionStatus === 'pending' && <span className="badge badge-warning">Pending</span>}
+                                                                {log.resolutionStatus === 'escalated' && <span className="badge badge-danger">Escalated</span>}
+                                                            </td>
+                                                            <td>
+                                                                {log.loadedFromShopify ? (
+                                                                    <span style={{fontSize: '0.75rem', color: '#96bf48'}}>🛍️ {log.shopifyStore}</span>
+                                                                ) : (
+                                                                    <span style={{fontSize: '0.75rem', color: '#6b7280'}}>Manual</span>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        
+                        {managerTab === 'templates' && (
+                            <div className="card">
+                                <h2 style={{marginBottom: '1rem'}}>Resolution Templates Editor</h2>
+                                <p style={{color: '#94a3b8', marginBottom: '2rem'}}>Customize the resolution templates that agents can select when logging calls.</p>
+                                
+                                {Object.keys(resolutionTemplates).map(reason => (
+                                    <div key={reason} style={{marginBottom: '2rem', padding: '1.5rem', background: 'rgba(30, 41, 59, 0.4)', borderRadius: '8px'}}>
+                                        <h3 style={{marginBottom: '1rem', color: '#3b82f6'}}>{reason}</h3>
+                                        {resolutionTemplates[reason].map((template, index) => (
+                                            <div key={index} className="form-group">
+                                                <label>Resolution {index + 1}</label>
+                                                <input 
+                                                    type="text" 
+                                                    className="form-control" 
+                                                    value={template} 
+                                                    onChange={(e) => {
+                                                        const updated = {...resolutionTemplates};
+                                                        updated[reason][index] = e.target.value;
+                                                        setResolutionTemplates(updated);
+                                                    }}
+                                                />
+                                            </div>
+                                        ))}
+                                        <button 
+                                            className="btn btn-primary" 
+                                            onClick={() => {
+                                                const updated = {...resolutionTemplates};
+                                                updated[reason].push('New resolution template');
+                                                setResolutionTemplates(updated);
+                                            }}
+                                            style={{marginTop: '0.5rem'}}
+                                        >
+                                            + Add Template
+                                        </button>
+                                    </div>
+                                ))}
+                                
+                                {success && <div className="success">{success}</div>}
+                                <button className="btn btn-success" onClick={saveTemplates} style={{width: '100%', padding: '1rem'}}>
+                                    💾 Save All Templates
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
+        const root = ReactDOM.createRoot(document.getElementById('app'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
