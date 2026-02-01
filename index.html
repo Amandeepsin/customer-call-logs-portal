@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Service Portal - Multi-Store Shopify</title>
+    <title>Customer Service Ticketing Portal</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -18,14 +18,19 @@
             min-height: 100vh;
         }
         .header {
-            background: rgba(30, 41, 59, 0.8);
+            background: rgba(30, 41, 59, 0.9);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(71, 85, 105, 0.5);
-            padding: 1.5rem 2rem;
+            padding: 1.25rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
+        .header h1 { font-size: 1.5rem; font-weight: 700; }
+        .header-right { display: flex; gap: 1rem; align-items: center; }
         .btn {
             padding: 0.75rem 1.5rem;
             border-radius: 8px;
@@ -33,118 +38,73 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
+            font-size: 0.875rem;
         }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
         .btn-primary { background: #3b82f6; color: white; }
         .btn-success { background: #10b981; color: white; }
         .btn-warning { background: #f59e0b; color: white; }
-        .btn-logout { background: rgba(71, 85, 105, 0.5); color: white; }
-        .btn-shopify { background: #96bf48; color: white; padding: 0.75rem 1rem; font-size: 0.875rem; }
-        .btn-shopify:hover { background: #7da73d; }
-        .btn-shopify:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-secondary { background: rgba(71, 85, 105, 0.6); color: white; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-sm { padding: 0.5rem 1rem; font-size: 0.75rem; }
         .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
         .card {
-            background: rgba(30, 41, 59, 0.6);
+            background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(71, 85, 105, 0.5);
             border-radius: 12px;
-            padding: 1.5rem;
+            padding: 2rem;
             margin-bottom: 1.5rem;
         }
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; color: #cbd5e1; font-size: 0.875rem; }
-        .form-control {
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { 
+            display: block; 
+            margin-bottom: 0.5rem; 
+            color: #cbd5e1; 
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .form-control, .form-select, .form-textarea {
             width: 100%;
-            padding: 0.75rem;
+            padding: 0.875rem;
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(71, 85, 105, 0.5);
             border-radius: 8px;
             color: white;
+            font-size: 1rem;
         }
-        .form-control:focus {
+        .form-control:focus, .form-select:focus, .form-textarea:focus {
             outline: none;
             border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
-        .form-control:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .form-control.error, .form-select.error, .form-textarea.error {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+            animation: shake 0.3s;
         }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        .filter-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 1rem; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: rgba(30, 41, 59, 0.8); padding: 1rem; text-align: left; font-weight: 600; font-size: 0.875rem; }
-        td { padding: 1rem; border-bottom: 1px solid rgba(71, 85, 105, 0.3); font-size: 0.875rem; }
-        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
-        .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
-        .badge-warning { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
-        .badge-danger { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-        .error { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
-        .success { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.5); color: #10b981; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
-        .info { background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #60a5fa; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
-        .role-btn {
-            padding: 2rem;
-            background: rgba(59, 130, 246, 0.1);
-            border: 2px solid rgba(59, 130, 246, 0.3);
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: center;
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
         }
-        .role-btn:hover {
-            background: rgba(59, 130, 246, 0.2);
-            border-color: rgba(59, 130, 246, 0.5);
-            transform: translateY(-4px);
+        .toggle-btn.error {
+            border-color: #ef4444 !important;
+            animation: pulse 0.5s;
         }
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
-        .stat-card { padding: 1.5rem; border-radius: 12px; }
-        .stat-value { font-size: 2rem; font-weight: bold; margin-top: 0.5rem; }
-        .stat-label { font-size: 0.875rem; opacity: 0.8; }
-        .radio-group { display: flex; flex-direction: column; gap: 0.75rem; }
-        .radio-option {
-            display: flex;
-            align-items: center;
-            padding: 0.75rem;
-            background: rgba(15, 23, 42, 0.4);
-            border: 1px solid rgba(71, 85, 105, 0.5);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
-        .radio-option:hover {
-            background: rgba(59, 130, 246, 0.1);
-            border-color: rgba(59, 130, 246, 0.5);
-        }
-        .radio-option input[type="radio"] {
-            margin-right: 0.75rem;
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-        .tabs {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid rgba(71, 85, 105, 0.5);
-        }
-        .tab {
-            padding: 0.75rem 1.5rem;
-            background: none;
-            border: none;
-            color: #94a3b8;
-            cursor: pointer;
-            font-weight: 600;
-            border-bottom: 2px solid transparent;
-        }
-        .tab.active {
-            color: white;
-            border-bottom-color: #3b82f6;
-        }
-        .yes-no-toggle {
+        .form-textarea { resize: vertical; min-height: 100px; font-family: inherit; }
+        .yes-no-buttons {
             display: flex;
             gap: 1rem;
         }
         .toggle-btn {
             flex: 1;
-            padding: 0.75rem;
+            padding: 1rem;
             background: rgba(15, 23, 42, 0.4);
             border: 2px solid rgba(71, 85, 105, 0.5);
             border-radius: 8px;
@@ -153,95 +113,230 @@
             transition: all 0.2s;
             text-align: center;
             font-weight: 600;
+            font-size: 1rem;
         }
         .toggle-btn:hover {
             border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
         }
         .toggle-btn.active {
             background: rgba(59, 130, 246, 0.2);
             border-color: #3b82f6;
             color: white;
         }
-        .input-with-button {
+        .reason-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        .reason-option {
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.4);
+            border: 2px solid rgba(71, 85, 105, 0.5);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .reason-option:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            transform: translateY(-2px);
+        }
+        .reason-option.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+        }
+        .reason-option h3 { margin-bottom: 0.5rem; font-size: 1.125rem; }
+        .reason-option p { font-size: 0.875rem; color: #94a3b8; }
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert-success { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.5); color: #10b981; }
+        .alert-error { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; }
+        .alert-info { background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #60a5fa; }
+        .alert-warning { background: rgba(251, 191, 36, 0.2); border: 1px solid rgba(251, 191, 36, 0.5); color: #fbbf24; }
+        .alert-next-steps {
+            background: rgba(16, 185, 129, 0.15);
+            border: 2px solid rgba(16, 185, 129, 0.6);
+            color: #10b981;
+            padding: 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+        .alert-next-steps strong {
+            display: block;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+            color: #10b981;
+            font-weight: 700;
+        }
+        .alert-next-steps ul {
+            margin: 0.5rem 0 0 1.5rem;
+            color: #cbd5e1;
+        }
+        .alert-next-steps li {
+            margin: 0.5rem 0;
+            line-height: 1.5;
+        }
+        .tabs {
             display: flex;
             gap: 0.5rem;
-            align-items: flex-start;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.5);
         }
-        .input-with-button input {
-            flex: 1;
+        .tab {
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
         }
-        .spinner {
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            width: 16px;
-            height: 16px;
-            animation: spin 0.6s linear infinite;
+        .tab:hover { color: white; }
+        .tab.active {
+            color: white;
+            border-bottom-color: #3b82f6;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        table { width: 100%; border-collapse: collapse; }
+        th { 
+            background: rgba(30, 41, 59, 0.8); 
+            padding: 1rem; 
+            text-align: left; 
+            font-weight: 600; 
+            font-size: 0.875rem;
+            border-bottom: 2px solid rgba(71, 85, 105, 0.5);
         }
-        .shopify-badge {
-            display: inline-flex;
+        td { 
+            padding: 1rem; 
+            border-bottom: 1px solid rgba(71, 85, 105, 0.3); 
+            font-size: 0.875rem;
+        }
+        .badge { 
+            display: inline-block; 
+            padding: 0.375rem 0.875rem; 
+            border-radius: 9999px; 
+            font-size: 0.75rem; 
+            font-weight: 600;
+        }
+        .badge-pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .badge-resolved { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .badge-escalated { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 1rem; 
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            padding: 1.5rem;
+            border-radius: 12px;
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(71, 85, 105, 0.5);
+        }
+        .stat-value { 
+            font-size: 2.5rem; 
+            font-weight: 700; 
+            margin: 0.5rem 0;
+        }
+        .stat-label { 
+            font-size: 0.875rem; 
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        .role-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            max-width: 800px;
+            margin: 4rem auto;
+        }
+        .role-card {
+            padding: 3rem;
+            background: rgba(30, 41, 59, 0.7);
+            border: 2px solid rgba(71, 85, 105, 0.5);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .role-card:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            transform: translateY(-4px);
+        }
+        .role-card h2 { margin-top: 1rem; font-size: 1.5rem; }
+        .role-card p { margin-top: 0.5rem; color: #94a3b8; }
+        .icon-large {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto;
+            opacity: 0.8;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .step-indicator {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            font-weight: 600;
+            color: #60a5fa;
+            display: flex;
             align-items: center;
             gap: 0.5rem;
-            background: rgba(150, 191, 72, 0.2);
-            border: 1px solid rgba(150, 191, 72, 0.5);
-            padding: 0.5rem 1rem;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(71, 85, 105, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            transition: width 0.3s;
+        }
+        .ticket-detail {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(71, 85, 105, 0.5);
             border-radius: 8px;
-            font-size: 0.875rem;
-            color: #96bf48;
+            padding: 1rem;
             margin-bottom: 1rem;
         }
-        .store-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-top: 0.5rem;
+        .ticket-detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.3);
         }
-        .store-us-ca { background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #60a5fa; }
-        .store-india { background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.5); color: #fb923c; }
-        .store-international { background: rgba(168, 85, 247, 0.2); border: 1px solid rgba(168, 85, 247, 0.5); color: #c084fc; }
-        .grid-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem; }
+        .ticket-detail-row:last-child {
+            border-bottom: none;
+        }
+        .ticket-detail-label {
+            font-weight: 600;
+            color: #94a3b8;
+        }
+        .ticket-detail-value {
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div id="app"></div>
     <script>
-        // 🔧 MULTI-STORE SHOPIFY CONFIGURATION
-        const SHOPIFY_STORES = {
-            us_canada: {
-                name: 'US & Canada Store',
-                storeUrl: 'thetangyshop.myshopify.com',
-                accessToken: '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',
-                countries: ['United States', 'Canada']
-            },
-            india: {
-                name: 'India Store',
-                storeUrl: 'tangyshopindia.myshopify.com',
-                accessToken: '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',
-                countries: ['India']
-            },
-            international: {
-                name: 'International Store',
-                storeUrl: 'tangyshopinternational.myshopify.com',
-                accessToken: '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',
-                countries: ['United Kingdom', 'Australia', 'Germany', 'France', 'Spain', 'Italy', 
-                           'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden', 'Norway', 
-                           'Denmark', 'Finland', 'Poland', 'China', 'Japan', 'South Korea', 
-                           'Singapore', 'Brazil', 'Mexico', 'Argentina', 'United Arab Emirates', 
-                           'Saudi Arabia', 'South Africa', 'Turkey', 'New Zealand', 'Other']
-            }
-        };
-        
-        const SHOPIFY_CONFIG = {
-            enabled: true  // Set to false to disable Shopify integration
-        };
-        
         const firebaseConfig = {
             apiKey: "AIzaSyDlBD0g4nBLXAzG1xV-sQp6VHdKxdwWsuk",
             authDomain: "employee-management-36cb3.firebaseapp.com",
@@ -256,1239 +351,1301 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
         
-        // Currency mapping
-        const CURRENCY_BY_COUNTRY = {
-            'United States': { symbol: '$', example: '$99.99', code: 'USD' },
-            'Canada': { symbol: 'CAD $', example: 'CAD $99.99', code: 'CAD' },
-            'United Kingdom': { symbol: '£', example: '£99.99', code: 'GBP' },
-            'Australia': { symbol: 'AUD $', example: 'AUD $99.99', code: 'AUD' },
-            'Germany': { symbol: '€', example: '€99.99', code: 'EUR' },
-            'France': { symbol: '€', example: '€99.99', code: 'EUR' },
-            'India': { symbol: '₹', example: '₹9999', code: 'INR' },
-            'Mexico': { symbol: 'MXN $', example: 'MXN $999.99', code: 'MXN' },
-            'Japan': { symbol: '¥', example: '¥9999', code: 'JPY' },
-            'Other': { symbol: '$', example: '$99.99', code: 'USD' }
-        };
+        const COUNTRIES = [
+            'India',
+            'United States',
+            'Canada',
+            'United Kingdom',
+            'Australia',
+            'Germany',
+            'France',
+            'Other'
+        ];
         
-        // Country code mapping
-        const COUNTRY_CODE_MAP = {
-            'US': 'United States',
-            'CA': 'Canada',
-            'GB': 'United Kingdom',
-            'AU': 'Australia',
-            'DE': 'Germany',
-            'FR': 'France',
-            'IN': 'India',
-            'MX': 'Mexico',
-            'JP': 'Japan',
-            'CN': 'China'
-        };
-        
-        const DEFAULT_RESOLUTION_TEMPLATES = {
-            "Order Tracking Inquiry": [
-                "Sent tracking details to customer via email",
-                "Provided tracking number and estimated delivery date",
-                "Updated customer on current shipment status",
-                "Explained delay and provided new delivery estimate"
-            ],
-            "Order Cancellation": [
-                "Order successfully cancelled, refund initiated",
-                "Order cancelled, refund will process in 3-5 business days",
-                "Order already shipped, provided return instructions",
-                "Cancellation completed, confirmed via email"
-            ],
-            "Add/Remove/Change items in order": [
-                "Successfully added/removed items from order",
-                "Order modified, sent updated confirmation",
-                "Items updated, no additional charges",
-                "Changes applied, new total communicated to customer"
-            ]
-        };
-        
-        const Storage = {
-            getOwner: () => {
-                const stored = localStorage.getItem('owner');
-                return stored ? JSON.parse(stored) : { 
-                    username: 'admin', 
-                    password: 'admin123'
-                };
-            },
-            getResolutionTemplates: () => {
-                const stored = localStorage.getItem('resolutionTemplates');
-                return stored ? JSON.parse(stored) : DEFAULT_RESOLUTION_TEMPLATES;
-            },
-            saveResolutionTemplates: (templates) => {
-                localStorage.setItem('resolutionTemplates', JSON.stringify(templates));
-            }
-        };
-        
-        // Helper function to determine which store to use based on country
-        const getStoreForCountry = (country) => {
-            if (SHOPIFY_STORES.us_canada.countries.includes(country)) {
-                return { key: 'us_canada', ...SHOPIFY_STORES.us_canada };
-            }
-            if (SHOPIFY_STORES.india.countries.includes(country)) {
-                return { key: 'india', ...SHOPIFY_STORES.india };
-            }
-            return { key: 'international', ...SHOPIFY_STORES.international };
-        };
-        
-        // Backend Proxy Server URL
-        const PROXY_URL = 'https://shopify-proxy-server-production.up.railway.app';
-        
-        // Shopify API Functions (now using backend proxy)
-        const ShopifyAPI = {
-            async fetchOrder(orderNumber, country) {
-                if (!SHOPIFY_CONFIG.enabled) {
-                    throw new Error('Shopify integration is disabled');
-                }
-                
-                if (!country) {
-                    throw new Error('Please select a country first to determine which store to query');
-                }
-                
-                try {
-                    // Call backend proxy server
-                    const response = await fetch(`${PROXY_URL}/api/fetch-order`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            orderNumber: orderNumber,
-                            country: country
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || `Server error: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    return data;
-                } catch (error) {
-                    if (error.message.includes('Failed to fetch')) {
-                        throw new Error('Cannot connect to proxy server. Please check if the server is running.');
-                    }
-                    throw error;
-                }
-            },
-            
-            parseOrder(order) {
-                const shipping = order.shipping_address || {};
-                const customer = order.customer || {};
-                const tracking = order.fulfillments && order.fulfillments[0] 
-                    ? order.fulfillments[0].tracking_number 
-                    : '';
-                
-                return {
-                    customerName: shipping.name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || '',
-                    email: order.email || customer.email || '',
-                    phoneNumber: shipping.phone || customer.phone || '',
-                    country: COUNTRY_CODE_MAP[shipping.country_code] || shipping.country || 'Other',
-                    orderNumber: order.name || '#' + order.order_number,
-                    trackingId: tracking,
-                    orderStatus: order.financial_status,
-                    totalAmount: order.total_price
-                };
-            }
+        const CURRENCY_MAP = {
+            'India': { symbol: '₹', code: 'INR' },
+            'United States': { symbol: '$', code: 'USD' },
+            'Canada': { symbol: 'C$', code: 'CAD' },
+            'United Kingdom': { symbol: '£', code: 'GBP' },
+            'Australia': { symbol: 'A$', code: 'AUD' },
+            'Germany': { symbol: '€', code: 'EUR' },
+            'France': { symbol: '€', code: 'EUR' },
+            'Other': { symbol: '$', code: 'USD' }
         };
         
         function App() {
-            const [currentUser, setCurrentUser] = useState(null);
-            const [userRole, setUserRole] = useState(null);
-            const [loginView, setLoginView] = useState(null);
-            const [loginForm, setLoginForm] = useState({ username: '', password: '' });
-            const [error, setError] = useState('');
-            const [success, setSuccess] = useState('');
-            const [employees, setEmployees] = useState([]);
-            const [callLogs, setCallLogs] = useState([]);
+            const [view, setView] = useState('roleSelect');
+            const [tickets, setTickets] = useState([]);
             const [loading, setLoading] = useState(false);
-            const [loadingShopify, setLoadingShopify] = useState(false);
-            const [managerTab, setManagerTab] = useState('calls');
-            const [employeeTab, setEmployeeTab] = useState('log');
-            const [selectedStore, setSelectedStore] = useState(null);
             
-            const [resolutionTemplates, setResolutionTemplates] = useState(Storage.getResolutionTemplates());
+            // Form state
+            const [step, setStep] = useState(1);
+            const [orderPlaced, setOrderPlaced] = useState(null);
+            const [country, setCountry] = useState('');
+            const [orderNumber, setOrderNumber] = useState('');
+            const [phoneNumber, setPhoneNumber] = useState('');
+            const [reasonForCall, setReasonForCall] = useState(null);
             
-            const [formData, setFormData] = useState({
-                customerName: '', orderNumber: '', email: '', phoneNumber: '', country: '',
-                reasonForCall: '', otherReason: '', resolution: '', 
-                customResolution: '', resolutionStatus: 'pending',
-                refundIssued: 'no', refundAmount: '',
-                trackingAssigned: 'no', trackingId: '',
-                orderLoadedFromShopify: false,
-                shopifyStore: ''
-            });
+            // Add/Remove Items flow
+            const [orderShipped, setOrderShipped] = useState(null);
+            const [refundRequired, setRefundRequired] = useState(null);
+            const [refundAmount, setRefundAmount] = useState('');
+            const [additionalPaymentRequired, setAdditionalPaymentRequired] = useState(null);
+            const [invoiceSent, setInvoiceSent] = useState(false);
             
-            const [searchTerm, setSearchTerm] = useState('');
-            const [filterEmployee, setFilterEmployee] = useState('all');
-            const [filterDate, setFilterDate] = useState('all');
-            const [filterStatus, setFilterStatus] = useState('all');
-            const [filterStore, setFilterStore] = useState('all');
-            const [filterReason, setFilterReason] = useState('all');
-            const [filterRefund, setFilterRefund] = useState('all');
-            const [filterTracking, setFilterTracking] = useState('all');
-            const [filterDataSource, setFilterDataSource] = useState('all');
-            const [dateFrom, setDateFrom] = useState('');
-            const [dateTo, setDateTo] = useState('');
+            // Change Order Details flow
+            const [orderDetailsChanged, setOrderDetailsChanged] = useState(null);
+            
+            // Order Tracking flow
+            const [trackingStatus, setTrackingStatus] = useState(null);
+            const [estimatedETA, setEstimatedETA] = useState('');
+            const [customerSatisfied, setCustomerSatisfied] = useState(null);
+            
+            // Order Delivered Problem flow
+            const [problemType, setProblemType] = useState(null);
+            const [videoReceived, setVideoReceived] = useState(false);
+            
+            // General Inquiry flow
+            const [generalQuery, setGeneralQuery] = useState('');
+            const [resolutionNotes, setResolutionNotes] = useState('');
+            const [generalStatus, setGeneralStatus] = useState(null);
+            
+            // Common fields
+            const [agentNotes, setAgentNotes] = useState('');
+            const [successMessage, setSuccessMessage] = useState('');
+            const [errorMessage, setErrorMessage] = useState('');
+            const [errorFields, setErrorFields] = useState([]);
+            
+            // Manager view
+            const [managerTab, setManagerTab] = useState('escalated');
+            const [selectedTicket, setSelectedTicket] = useState(null);
             
             useEffect(() => {
-                loadEmployees();
-            }, []);
-            
-            useEffect(() => {
-                if (userRole === 'employee') {
-                    loadEmployeeCallLogs();
+                if (view === 'manager') {
+                    loadTickets();
                 }
-            }, [userRole, currentUser]);
+            }, [view]);
             
-            // Update selected store when country changes
-            useEffect(() => {
-                if (formData.country) {
-                    const store = getStoreForCountry(formData.country);
-                    setSelectedStore(store);
-                }
-            }, [formData.country]);
-            
-            const loadEmployees = async () => {
+            const loadTickets = async () => {
                 try {
-                    const snapshot = await db.collection('employees').get();
-                    const emps = [];
-                    snapshot.forEach(doc => emps.push({...doc.data(), id: doc.id}));
-                    setEmployees(emps);
-                } catch (error) {
-                    console.error("Error loading employees:", error);
-                }
-            };
-            
-            const loadData = async () => {
-                setLoading(true);
-                try {
-                    const thirtyDaysAgo = new Date();
-                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                    const snapshot = await db.collection('customerCallLogs')
-                        .where('timestamp', '>=', thirtyDaysAgo.toISOString())
-                        .orderBy('timestamp', 'desc')
+                    const snapshot = await db.collection('customerServiceTickets')
+                        .orderBy('createdAt', 'desc')
                         .get();
-                    const logs = [];
-                    snapshot.forEach(doc => logs.push(doc.data()));
-                    setCallLogs(logs);
+                    
+                    const ticketsData = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    
+                    setTickets(ticketsData);
                 } catch (error) {
-                    console.error("Error loading data:", error);
-                } finally {
-                    setLoading(false);
+                    console.error('Error loading tickets:', error);
                 }
             };
             
-            const loadEmployeeCallLogs = async () => {
-                if (!currentUser || !currentUser.id) return;
-                setLoading(true);
-                try {
-                    const thirtyDaysAgo = new Date();
-                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                    const snapshot = await db.collection('customerCallLogs')
-                        .where('agentId', '==', currentUser.id)
-                        .where('timestamp', '>=', thirtyDaysAgo.toISOString())
-                        .orderBy('timestamp', 'desc')
-                        .get();
-                    const logs = [];
-                    snapshot.forEach(doc => logs.push(doc.data()));
-                    setCallLogs(logs);
-                } catch (error) {
-                    console.error("Error loading employee call logs:", error);
-                } finally {
-                    setLoading(false);
-                }
+            const resetForm = () => {
+                setStep(1);
+                setOrderPlaced(null);
+                setCountry('');
+                setOrderNumber('');
+                setPhoneNumber('');
+                setReasonForCall(null);
+                setOrderShipped(null);
+                setRefundRequired(null);
+                setRefundAmount('');
+                setAdditionalPaymentRequired(null);
+                setInvoiceSent(false);
+                setOrderDetailsChanged(null);
+                setTrackingStatus(null);
+                setEstimatedETA('');
+                setCustomerSatisfied(null);
+                setProblemType(null);
+                setVideoReceived(false);
+                setGeneralQuery('');
+                setResolutionNotes('');
+                setGeneralStatus(null);
+                setAgentNotes('');
             };
             
-            const handleLoadOrderFromShopify = async () => {
-                if (!formData.orderNumber) {
-                    setError('Please enter an order number first');
-                    return;
-                }
-                
-                if (!formData.country) {
-                    setError('Please select a country first to determine which store to query');
-                    return;
-                }
-                
-                setError('');
-                setSuccess('');
-                setLoadingShopify(true);
-                
-                try {
-                    const orderData = await ShopifyAPI.fetchOrder(formData.orderNumber, formData.country);
-                    setFormData({
-                        ...formData,
-                        customerName: orderData.customerName,
-                        email: orderData.email,
-                        phoneNumber: orderData.phoneNumber,
-                        country: orderData.country || formData.country,
-                        orderNumber: orderData.orderNumber,
-                        trackingId: orderData.trackingId,
-                        trackingAssigned: orderData.trackingId ? 'yes' : 'no',
-                        orderLoadedFromShopify: true,
-                        shopifyStore: orderData.storeName
-                    });
-                    setSuccess(`✅ Order loaded from ${orderData.storeName} successfully!`);
-                    setTimeout(() => setSuccess(''), 4000);
-                } catch (err) {
-                    setError(err.message || 'Failed to load order from Shopify');
-                } finally {
-                    setLoadingShopify(false);
-                }
+            const getProgress = () => {
+                if (orderPlaced === null) return 25;
+                if (orderPlaced === false && !generalQuery) return 50;
+                if (orderPlaced === false && generalQuery && !resolutionNotes) return 75;
+                if (orderPlaced === true && !reasonForCall) return 50;
+                if (orderPlaced === true && reasonForCall) return 75;
+                return 90;
             };
             
-            const handleEmployeeLogin = async (e) => {
-                e.preventDefault();
-                setError('');
-                const employee = employees.find(
-                    emp => emp.username === loginForm.username && emp.password === loginForm.password
-                );
-                if (!employee) {
-                    setError('Invalid username or password');
-                    return;
-                }
-                setCurrentUser(employee);
-                setUserRole('employee');
-                setLoginForm({ username: '', password: '' });
+            // Get currency symbol based on selected country
+            const getCurrencySymbol = () => {
+                if (!country) return '$';
+                return CURRENCY_MAP[country]?.symbol || '$';
             };
             
-            const handleManagerLogin = (e) => {
-                e.preventDefault();
-                setError('');
-                const owner = Storage.getOwner();
-                if (loginForm.username === owner.username && loginForm.password === owner.password) {
-                    setCurrentUser({ name: 'Manager', username: owner.username });
-                    setUserRole('manager');
-                    setLoginForm({ username: '', password: '' });
-                    loadData();
-                } else {
-                    setError('Invalid manager credentials');
-                }
-            };
-            
-            const handleLogout = () => {
-                setCurrentUser(null);
-                setUserRole(null);
-                setLoginView(null);
-                setError('');
-                setSuccess('');
-                setLoginForm({ username: '', password: '' });
-                setSelectedStore(null);
-                setFormData({
-                    customerName: '', orderNumber: '', email: '', phoneNumber: '', country: '',
-                    reasonForCall: '', otherReason: '', resolution: '', 
-                    customResolution: '', resolutionStatus: 'pending',
-                    refundIssued: 'no', refundAmount: '',
-                    trackingAssigned: 'no', trackingId: '',
-                    orderLoadedFromShopify: false,
-                    shopifyStore: ''
-                });
-            };
-            
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                setError('');
-                setSuccess('');
+            // Determine if ticket will be escalated or resolved
+            const getTicketStatus = () => {
+                if (!orderPlaced && !generalQuery) return null;
                 
-                if (!formData.customerName || !formData.orderNumber || !formData.email || 
-                    !formData.phoneNumber || !formData.country || !formData.reasonForCall) {
-                    setError('Please fill in all required fields');
-                    return;
-                }
-                
-                if (formData.reasonForCall === 'Other' && !formData.otherReason) {
-                    setError('Please specify the reason');
-                    return;
-                }
-                
-                const finalResolution = formData.resolution === 'custom' ? formData.customResolution : formData.resolution;
-                
-                if (!finalResolution) {
-                    setError('Please select or enter a resolution');
-                    return;
-                }
-                
-                if (formData.refundIssued === 'yes' && !formData.refundAmount) {
-                    setError('Please enter refund amount');
-                    return;
-                }
-                
-                if (formData.trackingAssigned === 'yes' && !formData.trackingId) {
-                    setError('Please enter new tracking ID');
-                    return;
-                }
-                
-                const callLog = {
-                    id: Date.now(),
-                    customerName: formData.customerName,
-                    orderNumber: formData.orderNumber,
-                    email: formData.email,
-                    phoneNumber: formData.phoneNumber,
-                    country: formData.country,
-                    reasonForCall: formData.reasonForCall,
-                    otherReason: formData.otherReason,
-                    resolution: finalResolution,
-                    resolutionStatus: formData.resolutionStatus,
-                    refundIssued: formData.refundIssued,
-                    refundAmount: formData.refundIssued === 'yes' ? formData.refundAmount : '',
-                    trackingAssigned: formData.trackingAssigned,
-                    trackingId: formData.trackingAssigned === 'yes' ? formData.trackingId : '',
-                    loadedFromShopify: formData.orderLoadedFromShopify,
-                    shopifyStore: formData.shopifyStore,
-                    agentName: currentUser.name || currentUser.username,
-                    agentId: currentUser.id,
-                    timestamp: new Date().toISOString(),
-                    date: new Date().toLocaleDateString(),
-                    time: new Date().toLocaleTimeString()
-                };
-                
-                try {
-                    await db.collection('customerCallLogs').doc(callLog.id.toString()).set(callLog);
-                    setSuccess('✅ Call logged successfully!');
-                    setFormData({
-                        customerName: '', orderNumber: '', email: '', phoneNumber: '', country: '',
-                        reasonForCall: '', otherReason: '', resolution: '', 
-                        customResolution: '', resolutionStatus: 'pending',
-                        refundIssued: 'no', refundAmount: '',
-                        trackingAssigned: 'no', trackingId: '',
-                        orderLoadedFromShopify: false,
-                        shopifyStore: ''
-                    });
-                    setSelectedStore(null);
-                    setTimeout(() => setSuccess(''), 3000);
-                    loadEmployeeCallLogs();
-                } catch (error) {
-                    setError('Error saving call log: ' + error.message);
-                }
-            };
-            
-            // Rest of the component code (saveTemplates, etc.) - keeping it the same
-            const saveTemplates = () => {
-                Storage.saveResolutionTemplates(resolutionTemplates);
-                setSuccess('Templates saved successfully!');
-                setTimeout(() => setSuccess(''), 3000);
-            };
-            
-            const filteredLogs = callLogs.filter(log => {
-                // Search filter
-                if (searchTerm) {
-                    const search = searchTerm.toLowerCase();
-                    const matches = log.customerName?.toLowerCase().includes(search) ||
-                        log.orderNumber?.toLowerCase().includes(search) ||
-                        log.email?.toLowerCase().includes(search) ||
-                        log.phoneNumber?.toLowerCase().includes(search);
-                    if (!matches) return false;
-                }
-                
-                // Employee filter
-                if (filterEmployee !== 'all' && log.agentId?.toString() !== filterEmployee) return false;
-                
-                // Status filter
-                if (filterStatus !== 'all' && log.resolutionStatus !== filterStatus) return false;
-                
-                // Store/Region filter
-                if (filterStore !== 'all') {
-                    const logStore = log.shopifyStore || '';
-                    if (filterStore === 'us_canada' && !logStore.includes('US & Canada')) return false;
-                    if (filterStore === 'india' && !logStore.includes('India') && log.country !== 'India') return false;
-                    if (filterStore === 'international' && !logStore.includes('International') && log.country !== 'United Kingdom' && log.country !== 'Australia') return false;
-                }
-                
-                // Reason for Call filter
-                if (filterReason !== 'all' && log.reasonForCall !== filterReason) return false;
-                
-                // Refund filter
-                if (filterRefund !== 'all') {
-                    if (filterRefund === 'yes' && log.refundIssued !== 'yes') return false;
-                    if (filterRefund === 'no' && log.refundIssued === 'yes') return false;
-                }
-                
-                // Tracking filter
-                if (filterTracking !== 'all') {
-                    if (filterTracking === 'yes' && log.trackingAssigned !== 'yes') return false;
-                    if (filterTracking === 'no' && log.trackingAssigned === 'yes') return false;
-                }
-                
-                // Data Source filter
-                if (filterDataSource !== 'all') {
-                    if (filterDataSource === 'shopify' && !log.loadedFromShopify) return false;
-                    if (filterDataSource === 'manual' && log.loadedFromShopify) return false;
-                }
-                
-                // Date range filter (preset or custom)
-                if (filterDate === 'custom') {
-                    const logDate = new Date(log.timestamp);
-                    if (dateFrom && new Date(dateFrom) > logDate) return false;
-                    if (dateTo) {
-                        const endDate = new Date(dateTo);
-                        endDate.setHours(23, 59, 59, 999);
-                        if (endDate < logDate) return false;
+                if (orderPlaced === true) {
+                    if (reasonForCall === 'add_remove') {
+                        if (orderShipped === true) return 'resolved'; // Can't modify shipped
+                        if (orderShipped === false && refundRequired === true) return 'escalated'; // Refund needs approval
+                        return 'resolved';
+                    } else if (reasonForCall === 'change_details') {
+                        if (orderShipped === true) return 'escalated'; // Shipped orders need escalation
+                        return 'resolved';
+                    } else if (reasonForCall === 'tracking') {
+                        if (trackingStatus === 'shipped_not_delivered') return 'escalated'; // Needs investigation
+                        if (trackingStatus === 'not_shipped' && customerSatisfied === false) return 'escalated'; // Wants refund
+                        return 'resolved';
+                    } else if (reasonForCall === 'problem_delivered') {
+                        return 'escalated'; // Always escalated
                     }
-                } else if (filterDate !== 'all') {
-                    const logDate = new Date(log.timestamp);
-                    const now = new Date();
-                    const daysDiff = Math.floor((now - logDate) / (1000 * 60 * 60 * 24));
-                    if (filterDate === 'today' && daysDiff > 0) return false;
-                    if (filterDate === 'week' && daysDiff > 7) return false;
-                    if (filterDate === 'month' && daysDiff > 30) return false;
+                } else {
+                    // General inquiry
+                    if (generalStatus === 'escalate') return 'escalated';
+                    return 'resolved';
                 }
                 
-                return true;
-            });
+                return null;
+            };
             
-            const totalCalls = callLogs.length;
-            const resolvedCalls = callLogs.filter(log => log.resolutionStatus === 'resolved').length;
-            const pendingCalls = callLogs.filter(log => log.resolutionStatus === 'pending').length;
-            const escalatedCalls = callLogs.filter(log => log.resolutionStatus === 'escalated').length;
+            // Get submit button text based on ticket status
+            const getSubmitButtonText = () => {
+                const status = getTicketStatus();
+                if (loading) return 'Submitting...';
+                if (status === 'escalated') return 'Submit & Escalate to Manager';
+                if (status === 'resolved') return 'Submit & Mark Resolved';
+                return 'Submit Ticket';
+            };
             
-            const currentTemplates = formData.reasonForCall && formData.reasonForCall !== 'Other' 
-                ? resolutionTemplates[formData.reasonForCall] || [] 
-                : [];
+            const handleSubmitTicket = async () => {
+                // Clear previous errors
+                setErrorFields([]);
+                const errors = [];
+                
+                // Comprehensive validation
+                if (!phoneNumber.trim()) {
+                    setErrorMessage('Please enter phone number');
+                    errors.push('phoneNumber');
+                    setTimeout(() => setErrorMessage(''), 3000);
+                    setErrorFields(errors);
+                    return;
+                }
+                
+                if (!country) {
+                    setErrorMessage('Please select country');
+                    errors.push('country');
+                    setTimeout(() => setErrorMessage(''), 3000);
+                    setErrorFields(errors);
+                    return;
+                }
+                
+                if (orderPlaced === null) {
+                    setErrorMessage('Please select if order was placed');
+                    setTimeout(() => setErrorMessage(''), 3000);
+                    return;
+                }
+                
+                if (orderPlaced === true) {
+                    if (!orderNumber.trim()) {
+                        setErrorMessage('Please enter order number');
+                        errors.push('orderNumber');
+                        setTimeout(() => setErrorMessage(''), 3000);
+                        setErrorFields(errors);
+                        return;
+                    }
+                    
+                    if (!reasonForCall) {
+                        setErrorMessage('Please select reason for calling');
+                        setTimeout(() => setErrorMessage(''), 3000);
+                        return;
+                    }
+                    
+                    // Validate based on reason for call
+                    if (reasonForCall === 'add_remove') {
+                        if (orderShipped === null) {
+                            setErrorMessage('Please specify if order has shipped');
+                            setTimeout(() => setErrorMessage(''), 3000);
+                            return;
+                        }
+                        
+                        if (orderShipped === false) {
+                            if (refundRequired === null) {
+                                setErrorMessage('Please specify if refund is required');
+                                setTimeout(() => setErrorMessage(''), 3000);
+                                return;
+                            }
+                            
+                            if (refundRequired === true && !refundAmount.trim()) {
+                                setErrorMessage('Please enter refund amount');
+                                setTimeout(() => setErrorMessage(''), 3000);
+                                return;
+                            }
+                            
+                            if (additionalPaymentRequired === null) {
+                                setErrorMessage('Please specify if additional payment is required');
+                                setTimeout(() => setErrorMessage(''), 3000);
+                                return;
+                            }
+                        }
+                    } else if (reasonForCall === 'change_details') {
+                        if (orderShipped === null) {
+                            setErrorMessage('Please specify if order has shipped');
+                            setTimeout(() => setErrorMessage(''), 3000);
+                            return;
+                        }
+                        
+                        if (orderShipped === false && orderDetailsChanged === null) {
+                            setErrorMessage('Please specify if order details were changed');
+                            setTimeout(() => setErrorMessage(''), 3000);
+                            return;
+                        }
+                    } else if (reasonForCall === 'tracking') {
+                        if (!trackingStatus) {
+                            setErrorMessage('Please select tracking status');
+                            setTimeout(() => setErrorMessage(''), 3000);
+                            return;
+                        }
+                        
+                        if (trackingStatus === 'not_shipped') {
+                            if (!estimatedETA.trim()) {
+                                setErrorMessage('Please enter estimated ETA');
+                                setTimeout(() => setErrorMessage(''), 3000);
+                                return;
+                            }
+                            
+                            if (customerSatisfied === null) {
+                                setErrorMessage('Please specify if customer is satisfied');
+                                setTimeout(() => setErrorMessage(''), 3000);
+                                return;
+                            }
+                        }
+                    } else if (reasonForCall === 'problem_delivered') {
+                        if (!problemType) {
+                            setErrorMessage('Please select problem type');
+                            setTimeout(() => setErrorMessage(''), 3000);
+                            return;
+                        }
+                        
+                        if (!videoReceived) {
+                            setErrorMessage('Please confirm that order opening video has been received via email');
+                            setTimeout(() => setErrorMessage(''), 3000);
+                            return;
+                        }
+                    }
+                } else {
+                    // General Inquiry validation
+                    if (!generalQuery.trim()) {
+                        setErrorMessage('Please enter the customer query');
+                        setTimeout(() => setErrorMessage(''), 3000);
+                        return;
+                    }
+                    
+                    if (!resolutionNotes.trim()) {
+                        setErrorMessage('Please enter how you resolved the query');
+                        setTimeout(() => setErrorMessage(''), 3000);
+                        return;
+                    }
+                    
+                    if (!generalStatus) {
+                        setErrorMessage('Please select status (Resolved or Escalate)');
+                        setTimeout(() => setErrorMessage(''), 3000);
+                        return;
+                    }
+                }
+                
+                // Validate conversation summary / additional notes (required for all tickets)
+                if (!agentNotes.trim()) {
+                    setErrorMessage('Please provide a conversation summary in Additional Notes');
+                    errors.push('agentNotes');
+                    setTimeout(() => setErrorMessage(''), 3000);
+                    setErrorFields(errors);
+                    return;
+                }
+                
+                setLoading(true);
+                
+                try {
+                    const ticketData = {
+                        orderPlaced,
+                        country,
+                        orderNumber: orderNumber || 'N/A',
+                        phoneNumber,
+                        timestamp: new Date().toISOString(),
+                        agentNotes
+                    };
+                    
+                    // Try to add server timestamp, but don't fail if permissions don't allow it
+                    try {
+                        ticketData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    } catch (e) {
+                        ticketData.createdAt = new Date().toISOString();
+                    }
+                    
+                    if (orderPlaced) {
+                        ticketData.reasonForCall = reasonForCall;
+                        
+                        if (reasonForCall === 'add_remove') {
+                            ticketData.orderShipped = orderShipped;
+                            
+                            if (orderShipped) {
+                                ticketData.status = 'resolved';
+                                ticketData.resolution = 'Customer informed that items cannot be added/removed from shipped orders';
+                            } else {
+                                ticketData.refundRequired = refundRequired;
+                                
+                                if (refundRequired) {
+                                    ticketData.status = 'escalated';
+                                    ticketData.refundAmount = parseFloat(refundAmount);
+                                    ticketData.resolution = 'Order edited in Shopify - Refund required';
+                                } else {
+                                    ticketData.status = 'resolved';
+                                    ticketData.resolution = 'Order edited in Shopify successfully';
+                                }
+                                
+                                ticketData.additionalPaymentRequired = additionalPaymentRequired;
+                                if (additionalPaymentRequired) {
+                                    ticketData.invoiceSent = invoiceSent;
+                                }
+                            }
+                        } else if (reasonForCall === 'change_details') {
+                            ticketData.orderShipped = orderShipped;
+                            
+                            if (orderShipped) {
+                                ticketData.status = 'escalated';
+                                ticketData.resolution = 'Order already shipped - Customer needs assistance with details change';
+                            } else {
+                                ticketData.orderDetailsChanged = orderDetailsChanged;
+                                ticketData.status = 'resolved';
+                                ticketData.resolution = orderDetailsChanged 
+                                    ? 'Customer updated details via email link'
+                                    : 'Agent updated details in Shopify';
+                            }
+                        } else if (reasonForCall === 'tracking') {
+                            ticketData.trackingStatus = trackingStatus;
+                            
+                            if (trackingStatus === 'shipped_not_delivered') {
+                                ticketData.status = 'escalated';
+                                ticketData.resolution = 'Order shipped but not delivered - needs investigation';
+                            } else if (trackingStatus === 'not_shipped') {
+                                ticketData.estimatedETA = estimatedETA;
+                                ticketData.customerSatisfied = customerSatisfied;
+                                
+                                if (customerSatisfied) {
+                                    ticketData.status = 'resolved';
+                                    ticketData.resolution = `Customer satisfied with ETA: ${estimatedETA}`;
+                                } else {
+                                    ticketData.status = 'escalated';
+                                    ticketData.resolution = 'Customer not satisfied - wants refund';
+                                }
+                            }
+                        } else if (reasonForCall === 'problem_delivered') {
+                            ticketData.problemType = problemType;
+                            ticketData.videoReceived = videoReceived;
+                            ticketData.status = 'escalated';
+                            ticketData.resolution = problemType === 'missing_wrong' 
+                                ? 'Missing or wrong item in order - Order opening video received'
+                                : 'Whole order wrong - Order opening video received';
+                        }
+                    } else {
+                        // General Inquiry
+                        ticketData.generalQuery = generalQuery;
+                        ticketData.resolutionNotes = resolutionNotes;
+                        ticketData.status = generalStatus === 'escalate' ? 'escalated' : 'resolved';
+                        ticketData.resolution = resolutionNotes;
+                    }
+                    
+                    await db.collection('customerServiceTickets').add(ticketData);
+                    
+                    setSuccessMessage('Ticket submitted successfully!');
+                    setTimeout(() => setSuccessMessage(''), 3000);
+                    resetForm();
+                } catch (error) {
+                    console.error('Error submitting ticket:', error);
+                    console.error('Error details:', error.code, error.message);
+                    
+                    // Show detailed error message
+                    let errorMsg = 'Error submitting ticket. ';
+                    if (error.code === 'permission-denied') {
+                        errorMsg += 'Permission denied. Please check Firebase security rules.';
+                    } else if (error.message) {
+                        errorMsg += error.message;
+                    } else {
+                        errorMsg += 'Please try again.';
+                    }
+                    
+                    setErrorMessage(errorMsg);
+                    setTimeout(() => setErrorMessage(''), 5000);
+                } finally {
+                    setLoading(false);
+                }
+            };
             
-            const isShopifyConfigured = SHOPIFY_CONFIG.enabled;
-            const canLoadOrder = formData.orderNumber && formData.country && !loadingShopify;
+            const updateTicketStatus = async (ticketId, newStatus, managerNotes = '') => {
+                try {
+                    await db.collection('customerServiceTickets').doc(ticketId).update({
+                        status: newStatus,
+                        managerNotes,
+                        resolvedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    loadTickets();
+                    setSelectedTicket(null);
+                } catch (error) {
+                    console.error('Error updating ticket:', error);
+                }
+            };
             
-            if (!currentUser) {
+            // Role Selection View
+            if (view === 'roleSelect') {
                 return (
                     <div>
                         <div className="header">
-                            <h1>📞 Customer Service Portal</h1>
-                            {SHOPIFY_CONFIG.enabled && (
-                                <div style={{fontSize: '0.875rem', color: '#96bf48'}}>
-                                    🛍️ Multi-Store Shopify Enabled
-                                </div>
-                            )}
+                            <h1>Customer Service Ticketing Portal</h1>
                         </div>
                         <div className="container">
-                            <div className="card" style={{maxWidth: '500px', margin: '4rem auto'}}>
-                                <h2 style={{marginBottom: '1rem', textAlign: 'center'}}>Welcome</h2>
-                                <p style={{textAlign: 'center', color: '#94a3b8', marginBottom: '2rem'}}>
-                                    Select your role to continue
-                                </p>
-                                
-                                {!loginView && (
-                                    <div style={{display: 'flex', gap: '1rem'}}>
-                                        <div className="role-btn" onClick={() => setLoginView('employee')} style={{flex: 1}}>
-                                            <h3>👤 Employee</h3>
-                                            <p style={{color: '#94a3b8', fontSize: '0.875rem', marginTop: '0.5rem'}}>Log customer calls</p>
-                                        </div>
-                                        <div className="role-btn" onClick={() => setLoginView('manager')} style={{flex: 1}}>
-                                            <h3>👔 Manager</h3>
-                                            <p style={{color: '#94a3b8', fontSize: '0.875rem', marginTop: '0.5rem'}}>View all calls</p>
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                {loginView === 'employee' && (
-                                    <div>
-                                        <h3 style={{marginBottom: '1.5rem', textAlign: 'center'}}>Employee Login</h3>
-                                        {error && <div className="error">{error}</div>}
-                                        <form onSubmit={handleEmployeeLogin}>
-                                            <div className="form-group">
-                                                <label>Username</label>
-                                                <input type="text" className="form-control" placeholder="Enter your username" value={loginForm.username} onChange={(e) => setLoginForm({...loginForm, username: e.target.value})} required />
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Password</label>
-                                                <input type="password" className="form-control" placeholder="Enter your password" value={loginForm.password} onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} required />
-                                            </div>
-                                            <button type="submit" className="btn btn-primary" style={{width: '100%', marginBottom: '0.5rem'}}>Login</button>
-                                            <button type="button" className="btn btn-logout" style={{width: '100%'}} onClick={() => {setLoginView(null); setError('');}}>Back</button>
-                                        </form>
-                                    </div>
-                                )}
-                                
-                                {loginView === 'manager' && (
-                                    <div>
-                                        <h3 style={{marginBottom: '1.5rem', textAlign: 'center'}}>Manager Login</h3>
-                                        {error && <div className="error">{error}</div>}
-                                        <form onSubmit={handleManagerLogin}>
-                                            <div className="form-group">
-                                                <label>Username</label>
-                                                <input type="text" className="form-control" placeholder="Enter manager username" value={loginForm.username} onChange={(e) => setLoginForm({...loginForm, username: e.target.value})} required />
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Password</label>
-                                                <input type="password" className="form-control" placeholder="Enter manager password" value={loginForm.password} onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} required />
-                                            </div>
-                                            <p style={{color: '#94a3b8', fontSize: '0.75rem', marginBottom: '1rem', textAlign: 'center'}}>Default: admin / admin123</p>
-                                            <button type="submit" className="btn btn-success" style={{width: '100%', marginBottom: '0.5rem'}}>Login as Manager</button>
-                                            <button type="button" className="btn btn-logout" style={{width: '100%'}} onClick={() => {setLoginView(null); setError('');}}>Back</button>
-                                        </form>
-                                    </div>
-                                )}
+                            <div className="role-selector">
+                                <div className="role-card" onClick={() => setView('agent')}>
+                                    <svg className="icon-large" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                                    </svg>
+                                    <h2>Agent</h2>
+                                    <p>Create customer service tickets</p>
+                                </div>
+                                <div className="role-card" onClick={() => setView('manager')}>
+                                    <svg className="icon-large" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                                    </svg>
+                                    <h2>Manager</h2>
+                                    <p>Review & resolve escalated tickets</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 );
             }
             
-            if (userRole === 'employee') {
+            // Agent View
+            if (view === 'agent') {
                 return (
                     <div>
                         <div className="header">
-                            <h1>📞 Customer Service - Agent</h1>
-                            <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
-                                {SHOPIFY_CONFIG.enabled && (
-                                    <div style={{fontSize: '0.75rem', color: '#96bf48'}}>
-                                        🛍️ 3 Stores Connected
-                                    </div>
-                                )}
-                                <span>Welcome, {currentUser.name || currentUser.username}</span>
-                                <button className="btn btn-logout" onClick={handleLogout}>Logout</button>
+                            <h1>Agent - New Ticket</h1>
+                            <div className="header-right">
+                                <button className="btn btn-secondary" onClick={() => setView('roleSelect')}>
+                                    Back
+                                </button>
                             </div>
                         </div>
+                        
                         <div className="container">
-                            <div className="tabs">
-                                <button className={`tab ${employeeTab === 'log' ? 'active' : ''}`} onClick={() => setEmployeeTab('log')}>
-                                    📝 Log Call
+                            {successMessage && (
+                                <div className="alert alert-success">
+                                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
+                                    </svg>
+                                    {successMessage}
+                                </div>
+                            )}
+                            
+                            {errorMessage && (
+                                <div className="alert alert-error">
+                                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"></path>
+                                    </svg>
+                                    {errorMessage}
+                                </div>
+                            )}
+                            
+                            <div className="progress-bar">
+                                <div className="progress-fill" style={{width: `${getProgress()}%`}}></div>
+                            </div>
+                            
+                            <div className="card">
+                                <div className="step-indicator">
+                                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"></path>
+                                    </svg>
+                                    How may I help you?
+                                </div>
+                                
+                                {/* Step 1: Basic Information */}
+                                <div className="grid-2">
+                                    <div className="form-group">
+                                        <label>Phone Number *</label>
+                                        <input
+                                            type="tel"
+                                            className={`form-control ${errorFields.includes('phoneNumber') ? 'error' : ''}`}
+                                            value={phoneNumber}
+                                            onChange={(e) => {
+                                                setPhoneNumber(e.target.value);
+                                                setErrorFields(errorFields.filter(f => f !== 'phoneNumber'));
+                                            }}
+                                            placeholder="Enter customer phone number"
+                                        />
+                                    </div>
+                                    
+                                    <div className="form-group">
+                                        <label>Country of Order *</label>
+                                        <select
+                                            className={`form-select ${errorFields.includes('country') ? 'error' : ''}`}
+                                            value={country}
+                                            onChange={(e) => {
+                                                setCountry(e.target.value);
+                                                setErrorFields(errorFields.filter(f => f !== 'country'));
+                                            }}
+                                        >
+                                            <option value="">Select country...</option>
+                                            {COUNTRIES.map(c => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                {/* Step 2: Order Placed? */}
+                                <div className="form-group">
+                                    <label>Has the customer already placed an order? *</label>
+                                    <div className="yes-no-buttons">
+                                        <button
+                                            className={`toggle-btn ${orderPlaced === true ? 'active' : ''}`}
+                                            onClick={() => {
+                                                setOrderPlaced(true);
+                                                setGeneralQuery('');
+                                                setResolutionNotes('');
+                                            }}
+                                        >
+                                            Yes - Order Placed
+                                        </button>
+                                        <button
+                                            className={`toggle-btn ${orderPlaced === false ? 'active' : ''}`}
+                                            onClick={() => {
+                                                setOrderPlaced(false);
+                                                setOrderNumber('');
+                                                setReasonForCall(null);
+                                            }}
+                                        >
+                                            No - General Inquiry
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                {/* If Order Placed = Yes */}
+                                {orderPlaced === true && (
+                                    <>
+                                        <div className="form-group">
+                                            <label>Order Number *</label>
+                                            <input
+                                                type="text"
+                                                className={`form-control ${errorFields.includes('orderNumber') ? 'error' : ''}`}
+                                                value={orderNumber}
+                                                onChange={(e) => {
+                                                    setOrderNumber(e.target.value);
+                                                    setErrorFields(errorFields.filter(f => f !== 'orderNumber'));
+                                                }}
+                                                placeholder="Enter order number"
+                                            />
+                                        </div>
+                                        
+                                        <div className="form-group">
+                                            <label>Reason for Calling *</label>
+                                            <div className="reason-options">
+                                                <div
+                                                    className={`reason-option ${reasonForCall === 'add_remove' ? 'active' : ''}`}
+                                                    onClick={() => setReasonForCall('add_remove')}
+                                                >
+                                                    <h3>Add/Remove Items</h3>
+                                                    <p>Modify items in the order</p>
+                                                </div>
+                                                
+                                                <div
+                                                    className={`reason-option ${reasonForCall === 'change_details' ? 'active' : ''}`}
+                                                    onClick={() => setReasonForCall('change_details')}
+                                                >
+                                                    <h3>Change Order Details</h3>
+                                                    <p>Update shipping or contact info</p>
+                                                </div>
+                                                
+                                                <div
+                                                    className={`reason-option ${reasonForCall === 'tracking' ? 'active' : ''}`}
+                                                    onClick={() => setReasonForCall('tracking')}
+                                                >
+                                                    <h3>Order Tracking</h3>
+                                                    <p>Check delivery status</p>
+                                                </div>
+                                                
+                                                <div
+                                                    className={`reason-option ${reasonForCall === 'problem_delivered' ? 'active' : ''}`}
+                                                    onClick={() => setReasonForCall('problem_delivered')}
+                                                >
+                                                    <h3>Problem with Delivered Order</h3>
+                                                    <p>Wrong or missing items</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Add/Remove Items Flow */}
+                                        {reasonForCall === 'add_remove' && (
+                                            <>
+                                                <div className="form-group">
+                                                    <label>Has order already shipped? *</label>
+                                                    <div className="yes-no-buttons">
+                                                        <button
+                                                            className={`toggle-btn ${orderShipped === true ? 'active' : ''}`}
+                                                            onClick={() => setOrderShipped(true)}
+                                                        >
+                                                            Yes - Already Shipped
+                                                        </button>
+                                                        <button
+                                                            className={`toggle-btn ${orderShipped === false ? 'active' : ''}`}
+                                                            onClick={() => setOrderShipped(false)}
+                                                        >
+                                                            No - Not Shipped Yet
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                
+                                                {orderShipped === true && (
+                                                    <div className="alert alert-info">
+                                                        ℹ️ Customer informed that items cannot be added/removed from shipped orders. This will be marked as resolved.
+                                                    </div>
+                                                )}
+                                                
+                                                {orderShipped === false && (
+                                                    <>
+                                                        <div className="alert-next-steps">
+                                                            <strong>📋 Next Steps</strong>
+                                                            <ul>
+                                                                <li>Open Shopify admin panel</li>
+                                                                <li>Search for order number</li>
+                                                                <li>Edit the order - add or remove items as requested</li>
+                                                                <li>Save changes</li>
+                                                            </ul>
+                                                        </div>
+                                                        
+                                                        <div className="form-group">
+                                                            <label>Is refund required after changes? *</label>
+                                                            <div className="yes-no-buttons">
+                                                                <button
+                                                                    className={`toggle-btn ${refundRequired === true ? 'active' : ''}`}
+                                                                    onClick={() => setRefundRequired(true)}
+                                                                >
+                                                                    Yes - Refund Needed
+                                                                </button>
+                                                                <button
+                                                                    className={`toggle-btn ${refundRequired === false ? 'active' : ''}`}
+                                                                    onClick={() => {
+                                                                        setRefundRequired(false);
+                                                                        setRefundAmount('');
+                                                                    }}
+                                                                >
+                                                                    No Refund
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {refundRequired === true && (
+                                                            <div key={country}>
+                                                                <div className="form-group">
+                                                                    <label>Refund Amount ({getCurrencySymbol()}) *</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        className="form-control"
+                                                                        value={refundAmount}
+                                                                        onChange={(e) => setRefundAmount(e.target.value)}
+                                                                        placeholder={`Enter refund amount in ${getCurrencySymbol()}`}
+                                                                    />
+                                                                </div>
+                                                                <div className="alert alert-warning">
+                                                                    ⚠️ Refund required - This will be escalated to manager for approval
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        <div className="form-group">
+                                                            <label>Is additional payment required from customer? *</label>
+                                                            <div className="yes-no-buttons">
+                                                                <button
+                                                                    className={`toggle-btn ${additionalPaymentRequired === true ? 'active' : ''}`}
+                                                                    onClick={() => setAdditionalPaymentRequired(true)}
+                                                                >
+                                                                    Yes - Payment Needed
+                                                                </button>
+                                                                <button
+                                                                    className={`toggle-btn ${additionalPaymentRequired === false ? 'active' : ''}`}
+                                                                    onClick={() => {
+                                                                        setAdditionalPaymentRequired(false);
+                                                                        setInvoiceSent(false);
+                                                                    }}
+                                                                >
+                                                                    No Payment Needed
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {additionalPaymentRequired === true && (
+                                                            <div className="form-group">
+                                                                <label>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={invoiceSent}
+                                                                        onChange={(e) => setInvoiceSent(e.target.checked)}
+                                                                        style={{marginRight: '0.5rem'}}
+                                                                    />
+                                                                    I have sent the invoice to the customer
+                                                                </label>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                        
+                                        {/* Change Order Details Flow */}
+                                        {reasonForCall === 'change_details' && (
+                                            <>
+                                                <div className="form-group">
+                                                    <label>Has order already shipped? *</label>
+                                                    <div className="yes-no-buttons">
+                                                        <button
+                                                            className={`toggle-btn ${orderShipped === true ? 'active' : ''}`}
+                                                            onClick={() => setOrderShipped(true)}
+                                                        >
+                                                            Yes - Already Shipped
+                                                        </button>
+                                                        <button
+                                                            className={`toggle-btn ${orderShipped === false ? 'active' : ''}`}
+                                                            onClick={() => setOrderShipped(false)}
+                                                        >
+                                                            No - Not Shipped Yet
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                
+                                                {orderShipped === true && (
+                                                    <div className="alert alert-warning">
+                                                        ⚠️ Order already shipped - Details cannot be changed. This will be escalated to manager for assistance.
+                                                    </div>
+                                                )}
+                                                
+                                                {orderShipped === false && (
+                                                    <>
+                                                        <div className="alert-next-steps">
+                                                            <strong>📋 Next Steps</strong>
+                                                            <ul>
+                                                                <li>Instruct customer to open their confirmation email</li>
+                                                                <li>Ask them to click the link to update details themselves</li>
+                                                                <li>If customer cannot do it, update details in Shopify</li>
+                                                            </ul>
+                                                        </div>
+                                                        
+                                                        <div className="form-group">
+                                                            <label>Did customer update details successfully? *</label>
+                                                            <div className="yes-no-buttons">
+                                                                <button
+                                                                    className={`toggle-btn ${orderDetailsChanged === true ? 'active' : ''}`}
+                                                                    onClick={() => setOrderDetailsChanged(true)}
+                                                                >
+                                                                    Yes - Customer Updated
+                                                                </button>
+                                                                <button
+                                                                    className={`toggle-btn ${orderDetailsChanged === false ? 'active' : ''}`}
+                                                                    onClick={() => setOrderDetailsChanged(false)}
+                                                                >
+                                                                    No - Agent Updated in Shopify
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                        
+                                        {/* Order Tracking Flow */}
+                                        {reasonForCall === 'tracking' && (
+                                            <>
+                                                <div className="form-group">
+                                                    <label>Has order already shipped? *</label>
+                                                    <div className="reason-options">
+                                                        <div
+                                                            className={`reason-option ${trackingStatus === 'shipped_not_delivered' ? 'active' : ''}`}
+                                                            onClick={() => setTrackingStatus('shipped_not_delivered')}
+                                                        >
+                                                            <h3>Yes - Shipped but Not Delivered</h3>
+                                                            <p>Order is in transit</p>
+                                                        </div>
+                                                        
+                                                        <div
+                                                            className={`reason-option ${trackingStatus === 'not_shipped' ? 'active' : ''}`}
+                                                            onClick={() => setTrackingStatus('not_shipped')}
+                                                        >
+                                                            <h3>No - Not Shipped Yet</h3>
+                                                            <p>Still processing</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                {trackingStatus === 'shipped_not_delivered' && (
+                                                    <div className="alert alert-warning">
+                                                        ⚠️ Order shipped but not delivered. This will be escalated to manager for investigation.
+                                                    </div>
+                                                )}
+                                                
+                                                {trackingStatus === 'not_shipped' && (
+                                                    <>
+                                                        <div className="form-group">
+                                                            <label>Estimated ETA of Shipping/Delivery *</label>
+                                                            <input
+                                                                type="text"
+                                                                className="form-control"
+                                                                value={estimatedETA}
+                                                                onChange={(e) => setEstimatedETA(e.target.value)}
+                                                                placeholder="e.g., 2-3 business days, January 15, etc."
+                                                            />
+                                                        </div>
+                                                        
+                                                        <div className="form-group">
+                                                            <label>Is customer satisfied with the ETA? *</label>
+                                                            <div className="yes-no-buttons">
+                                                                <button
+                                                                    className={`toggle-btn ${customerSatisfied === true ? 'active' : ''}`}
+                                                                    onClick={() => setCustomerSatisfied(true)}
+                                                                >
+                                                                    Yes - Customer Satisfied
+                                                                </button>
+                                                                <button
+                                                                    className={`toggle-btn ${customerSatisfied === false ? 'active' : ''}`}
+                                                                    onClick={() => setCustomerSatisfied(false)}
+                                                                >
+                                                                    No - Wants Refund
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {customerSatisfied === false && (
+                                                            <div className="alert alert-warning">
+                                                                ⚠️ Customer not satisfied and wants refund. This will be escalated to manager.
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                        
+                                        {/* Problem with Delivered Order Flow */}
+                                        {reasonForCall === 'problem_delivered' && (
+                                            <>
+                                                <div className="form-group">
+                                                    <label>Type of Problem *</label>
+                                                    <div className="reason-options">
+                                                        <div
+                                                            className={`reason-option ${problemType === 'missing_wrong' ? 'active' : ''}`}
+                                                            onClick={() => setProblemType('missing_wrong')}
+                                                        >
+                                                            <h3>Missing/Wrong Item</h3>
+                                                            <p>Some items are missing or incorrect</p>
+                                                        </div>
+                                                        
+                                                        <div
+                                                            className={`reason-option ${problemType === 'whole_order_wrong' ? 'active' : ''}`}
+                                                            onClick={() => setProblemType('whole_order_wrong')}
+                                                        >
+                                                            <h3>Whole Order Wrong</h3>
+                                                            <p>Entire order is incorrect</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                {problemType && (
+                                                    <>
+                                                        <div className="alert-next-steps">
+                                                            <strong>📋 Next Steps</strong>
+                                                            <ul>
+                                                                <li>Ask customer to record a video while opening the order package</li>
+                                                                <li>Request customer to send the video via email</li>
+                                                                <li>Once video is received, confirm below and escalate to manager</li>
+                                                            </ul>
+                                                        </div>
+                                                        
+                                                        <div className="form-group">
+                                                            <label style={{display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', cursor: 'pointer'}}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={videoReceived}
+                                                                    onChange={(e) => setVideoReceived(e.target.checked)}
+                                                                    style={{width: '20px', height: '20px', cursor: 'pointer'}}
+                                                                />
+                                                                <span style={{fontWeight: 600, color: '#cbd5e1'}}>
+                                                                    ✅ I confirm that order opening video has been received via email
+                                                                </span>
+                                                            </label>
+                                                        </div>
+                                                        
+                                                        {videoReceived && (
+                                                            <div className="alert alert-warning">
+                                                                ⚠️ Video received - This issue will be escalated to manager for resolution.
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                    </>
+                                )}
+                                
+                                {/* If Order Placed = No (General Inquiry) */}
+                                {orderPlaced === false && (
+                                    <>
+                                        <div className="alert alert-info">
+                                            ℹ️ This will be categorized as a "General Inquiry"
+                                        </div>
+                                        
+                                        <div className="form-group">
+                                            <label>What was the query? *</label>
+                                            <textarea
+                                                className="form-textarea"
+                                                value={generalQuery}
+                                                onChange={(e) => setGeneralQuery(e.target.value)}
+                                                placeholder="Describe the customer's inquiry..."
+                                                rows="4"
+                                            />
+                                        </div>
+                                        
+                                        <div className="form-group">
+                                            <label>How did you resolve it? *</label>
+                                            <textarea
+                                                className="form-textarea"
+                                                value={resolutionNotes}
+                                                onChange={(e) => setResolutionNotes(e.target.value)}
+                                                placeholder="Describe the resolution provided..."
+                                                rows="4"
+                                            />
+                                        </div>
+                                        
+                                        <div className="form-group">
+                                            <label>Status *</label>
+                                            <div className="yes-no-buttons">
+                                                <button
+                                                    className={`toggle-btn ${generalStatus === 'resolved' ? 'active' : ''}`}
+                                                    onClick={() => setGeneralStatus('resolved')}
+                                                >
+                                                    ✓ Resolved
+                                                </button>
+                                                <button
+                                                    className={`toggle-btn ${generalStatus === 'escalate' ? 'active' : ''}`}
+                                                    onClick={() => setGeneralStatus('escalate')}
+                                                >
+                                                    ⚠️ Escalate to Manager
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                                
+                                {/* Additional Agent Notes */}
+                                <div className="form-group">
+                                    <label>Conversation Summary / Additional Notes *</label>
+                                    <textarea
+                                        className={`form-textarea ${errorFields.includes('agentNotes') ? 'error' : ''}`}
+                                        value={agentNotes}
+                                        onChange={(e) => {
+                                            setAgentNotes(e.target.value);
+                                            setErrorFields(errorFields.filter(f => f !== 'agentNotes'));
+                                        }}
+                                        placeholder="Briefly explain the conversation: what the customer said, what you told them, any important details..."
+                                        rows="4"
+                                    />
+                                    <p style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem'}}>
+                                        💡 This helps managers understand the full context of the call
+                                    </p>
+                                </div>
+                                
+                                {/* Submit Buttons */}
+                                <div style={{marginTop: '2rem', display: 'flex', gap: '1rem'}}>
+                                    <button
+                                        className={`btn ${getTicketStatus() === 'escalated' ? 'btn-warning' : 'btn-success'}`}
+                                        onClick={handleSubmitTicket}
+                                        disabled={loading}
+                                        style={{flex: 1}}
+                                    >
+                                        {getSubmitButtonText()}
+                                    </button>
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={resetForm}
+                                        disabled={loading}
+                                    >
+                                        Clear Form
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            // Manager View
+            if (view === 'manager') {
+                const escalatedTickets = tickets.filter(t => t.status === 'escalated');
+                const resolvedTickets = tickets.filter(t => t.status === 'resolved');
+                
+                const displayTickets = managerTab === 'escalated' ? escalatedTickets : tickets;
+                
+                return (
+                    <div>
+                        <div className="header">
+                            <h1>Manager Portal</h1>
+                            <div className="header-right">
+                                <button className="btn btn-secondary" onClick={() => setView('roleSelect')}>
+                                    Back
                                 </button>
-                                <button className={`tab ${employeeTab === 'history' ? 'active' : ''}`} onClick={() => setEmployeeTab('history')}>
-                                    📊 My Call History ({callLogs.length})
+                            </div>
+                        </div>
+                        
+                        <div className="container">
+                            {/* Statistics */}
+                            <div className="stats-grid">
+                                <div className="stat-card" style={{borderLeft: '4px solid #ef4444'}}>
+                                    <div className="stat-label">Escalated Tickets</div>
+                                    <div className="stat-value">{escalatedTickets.length}</div>
+                                    <div className="stat-label">Needs attention</div>
+                                </div>
+                                
+                                <div className="stat-card" style={{borderLeft: '4px solid #10b981'}}>
+                                    <div className="stat-label">Resolved Tickets</div>
+                                    <div className="stat-value">{resolvedTickets.length}</div>
+                                    <div className="stat-label">Completed by agents</div>
+                                </div>
+                                
+                                <div className="stat-card" style={{borderLeft: '4px solid #60a5fa'}}>
+                                    <div className="stat-label">Total Tickets</div>
+                                    <div className="stat-value">{tickets.length}</div>
+                                    <div className="stat-label">All time</div>
+                                </div>
+                                
+                                <div className="stat-card" style={{borderLeft: '4px solid #fbbf24'}}>
+                                    <div className="stat-label">Today's Tickets</div>
+                                    <div className="stat-value">
+                                        {tickets.filter(t => {
+                                            if (!t.timestamp) return false;
+                                            const ticketDate = new Date(t.timestamp).toDateString();
+                                            const today = new Date().toDateString();
+                                            return ticketDate === today;
+                                        }).length}
+                                    </div>
+                                    <div className="stat-label">Created today</div>
+                                </div>
+                            </div>
+                            
+                            {/* Tabs */}
+                            <div className="tabs">
+                                <button
+                                    className={`tab ${managerTab === 'escalated' ? 'active' : ''}`}
+                                    onClick={() => setManagerTab('escalated')}
+                                >
+                                    Escalated ({escalatedTickets.length})
+                                </button>
+                                <button
+                                    className={`tab ${managerTab === 'all' ? 'active' : ''}`}
+                                    onClick={() => setManagerTab('all')}
+                                >
+                                    All Tickets ({tickets.length})
                                 </button>
                             </div>
                             
-                            {employeeTab === 'log' ? (
-                                <div className="card" style={{maxWidth: '1000px', margin: '0 auto'}}>
-                                    <h2 style={{marginBottom: '1.5rem'}}>Log Customer Call</h2>
-                                    
-                                    {SHOPIFY_CONFIG.enabled && (
-                                        <div className="shopify-badge">
-                                            🛍️ Multi-Store Integration Active
-                                            <span style={{marginLeft: '0.5rem', opacity: 0.8}}>• Select country to auto-route to correct store</span>
-                                        </div>
-                                    )}
-                                    
-                                    {error && <div className="error">{error}</div>}
-                                    {success && <div className="success">{success}</div>}
-                                    
-                                    <form onSubmit={handleSubmit}>
-                                        <div className="grid-3">
-                                            <div className="form-group">
-                                                <label>Order Number *</label>
-                                                <input 
-                                                    className="form-control" 
-                                                    placeholder="#1234 or 1234" 
-                                                    value={formData.orderNumber} 
-                                                    onChange={(e) => setFormData({...formData, orderNumber: e.target.value})}
-                                                />
-                                            </div>
-                                            
-                                            <div className="form-group">
-                                                <label>Country * (Determines Store)</label>
-                                                <select 
-                                                    className="form-control" 
-                                                    value={formData.country} 
-                                                    onChange={(e) => setFormData({...formData, country: e.target.value})}
-                                                    disabled={loadingShopify}
-                                                >
-                                                    <option value="">Select country...</option>
-                                                    <optgroup label="🇺🇸 US & Canada Store">
-                                                        <option>United States</option>
-                                                        <option>Canada</option>
-                                                    </optgroup>
-                                                    <optgroup label="🇮🇳 India Store">
-                                                        <option>India</option>
-                                                    </optgroup>
-                                                    <optgroup label="🌍 International Store">
-                                                        <option>United Kingdom</option>
-                                                        <option>Australia</option>
-                                                        <option>Germany</option>
-                                                        <option>France</option>
-                                                        <option>Mexico</option>
-                                                        <option>Japan</option>
-                                                        <option>Other</option>
-                                                    </optgroup>
-                                                </select>
-                                                {selectedStore && (
-                                                    <div className={`store-indicator store-${selectedStore.key.replace('_', '-')}`}>
-                                                        🛍️ {selectedStore.name}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            
-                                            <div className="form-group">
-                                                <label style={{opacity: 0}}>Action</label>
-                                                {SHOPIFY_CONFIG.enabled && (
-                                                    <button 
-                                                        type="button" 
-                                                        className="btn btn-shopify"
-                                                        onClick={handleLoadOrderFromShopify}
-                                                        disabled={!canLoadOrder}
-                                                        style={{width: '100%', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'}}
-                                                    >
-                                                        {loadingShopify ? (
-                                                            <>
-                                                                <div className="spinner"></div>
-                                                                <span>Loading...</span>
-                                                            </>
+                            {/* Tickets Table */}
+                            <div className="card">
+                                {displayTickets.length === 0 ? (
+                                    <div style={{textAlign: 'center', padding: '3rem', color: '#94a3b8'}}>
+                                        <svg style={{width: '64px', height: '64px', margin: '0 auto 1rem', opacity: 0.5}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                        </svg>
+                                        <p>No tickets to display</p>
+                                    </div>
+                                ) : (
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Date/Time</th>
+                                                <th>Phone</th>
+                                                <th>Country</th>
+                                                <th>Order #</th>
+                                                <th>Type</th>
+                                                <th>Issue</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {displayTickets.map(ticket => (
+                                                <tr key={ticket.id}>
+                                                    <td>
+                                                        {ticket.timestamp ? new Date(ticket.timestamp).toLocaleString('en-US', {
+                                                            month: 'short',
+                                                            day: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        }) : 'N/A'}
+                                                    </td>
+                                                    <td>{ticket.phoneNumber}</td>
+                                                    <td>{ticket.country}</td>
+                                                    <td style={{fontWeight: 600}}>{ticket.orderNumber}</td>
+                                                    <td>
+                                                        {ticket.orderPlaced ? (
+                                                            <span style={{color: '#60a5fa'}}>Order Issue</span>
                                                         ) : (
-                                                            <>
-                                                                🛍️ Load Order
-                                                            </>
+                                                            <span style={{color: '#94a3b8'}}>General Inquiry</span>
                                                         )}
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        
-                                        {SHOPIFY_CONFIG.enabled && (
-                                            <p style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '-0.5rem', marginBottom: '1rem'}}>
-                                                💡 Enter order number and select country, then click "Load Order" to auto-fill customer details
-                                            </p>
-                                        )}
-                                        
-                                        <div className="grid-2">
-                                            <div className="form-group">
-                                                <label>Customer Name *</label>
-                                                <input 
-                                                    className="form-control" 
-                                                    placeholder="John Doe" 
-                                                    value={formData.customerName} 
-                                                    onChange={(e) => setFormData({...formData, customerName: e.target.value})}
-                                                    disabled={loadingShopify}
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Email *</label>
-                                                <input 
-                                                    type="email" 
-                                                    className="form-control" 
-                                                    placeholder="customer@email.com" 
-                                                    value={formData.email} 
-                                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                                    disabled={loadingShopify}
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Phone *</label>
-                                                <input 
-                                                    className="form-control" 
-                                                    placeholder="+1 (555) 123-4567" 
-                                                    value={formData.phoneNumber} 
-                                                    onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
-                                                    disabled={loadingShopify}
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Reason for Call *</label>
-                                                <select className="form-control" value={formData.reasonForCall} onChange={(e) => setFormData({...formData, reasonForCall: e.target.value, resolution: '', customResolution: ''})}>
-                                                    <option value="">Select...</option>
-                                                    <option>Order Tracking Inquiry</option>
-                                                    <option>Order Cancellation</option>
-                                                    <option>Add/Remove/Change items in order</option>
-                                                    <option>Other</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        
-                                        {formData.reasonForCall === 'Other' && (
-                                            <div className="form-group">
-                                                <label>Specify Reason *</label>
-                                                <textarea className="form-control" rows="3" placeholder="Explain the reason..." value={formData.otherReason} onChange={(e) => setFormData({...formData, otherReason: e.target.value})} />
-                                            </div>
-                                        )}
-                                        
-                                        {formData.reasonForCall && formData.reasonForCall !== 'Other' && currentTemplates.length > 0 && (
-                                            <div className="form-group">
-                                                <label>Resolution / How was it resolved? *</label>
-                                                <div className="radio-group">
-                                                    {currentTemplates.map((template, index) => (
-                                                        <label key={index} className="radio-option">
-                                                            <input
-                                                                type="radio"
-                                                                name="resolution"
-                                                                value={template}
-                                                                checked={formData.resolution === template}
-                                                                onChange={(e) => setFormData({...formData, resolution: e.target.value, customResolution: ''})}
-                                                            />
-                                                            <span>{template}</span>
-                                                        </label>
-                                                    ))}
-                                                    <label className="radio-option">
-                                                        <input
-                                                            type="radio"
-                                                            name="resolution"
-                                                            value="custom"
-                                                            checked={formData.resolution === 'custom'}
-                                                            onChange={() => setFormData({...formData, resolution: 'custom'})}
-                                                        />
-                                                        <span>Custom (write your own)</span>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        )}
-                                        
-                                        {(formData.resolution === 'custom' || formData.reasonForCall === 'Other') && (
-                                            <div className="form-group">
-                                                <label>Custom Resolution *</label>
-                                                <textarea className="form-control" rows="4" placeholder="Describe how the customer's issue was resolved..." value={formData.customResolution} onChange={(e) => setFormData({...formData, customResolution: e.target.value})} />
-                                            </div>
-                                        )}
-                                        
-                                        <div className="grid-2">
-                                            <div className="form-group">
-                                                <label>Any refund issued? *</label>
-                                                <div className="yes-no-toggle">
-                                                    <button
-                                                        type="button"
-                                                        className={`toggle-btn ${formData.refundIssued === 'no' ? 'active' : ''}`}
-                                                        onClick={() => setFormData({...formData, refundIssued: 'no', refundAmount: ''})}
-                                                    >
-                                                        No
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className={`toggle-btn ${formData.refundIssued === 'yes' ? 'active' : ''}`}
-                                                        onClick={() => setFormData({...formData, refundIssued: 'yes'})}
-                                                    >
-                                                        Yes
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            
-                                            {formData.refundIssued === 'yes' && (
-                                                <div className="form-group">
-                                                    <label>Refund Amount *</label>
-                                                    <input
-                                                        type="text"
-                                                        className="form-control"
-                                                        placeholder={formData.country && CURRENCY_BY_COUNTRY[formData.country] 
-                                                            ? CURRENCY_BY_COUNTRY[formData.country].example 
-                                                            : '$99.99'}
-                                                        value={formData.refundAmount}
-                                                        onChange={(e) => setFormData({...formData, refundAmount: e.target.value})}
-                                                    />
-                                                    {formData.country && CURRENCY_BY_COUNTRY[formData.country] && (
-                                                        <p style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem'}}>
-                                                            Currency: {CURRENCY_BY_COUNTRY[formData.country].symbol} ({formData.country})
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                        
-                                        <div className="grid-2">
-                                            <div className="form-group">
-                                                <label>Any new tracking assigned? *</label>
-                                                <div className="yes-no-toggle">
-                                                    <button
-                                                        type="button"
-                                                        className={`toggle-btn ${formData.trackingAssigned === 'no' ? 'active' : ''}`}
-                                                        onClick={() => setFormData({...formData, trackingAssigned: 'no', trackingId: ''})}
-                                                    >
-                                                        No
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className={`toggle-btn ${formData.trackingAssigned === 'yes' ? 'active' : ''}`}
-                                                        onClick={() => setFormData({...formData, trackingAssigned: 'yes'})}
-                                                    >
-                                                        Yes
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            
-                                            {formData.trackingAssigned === 'yes' && (
-                                                <div className="form-group">
-                                                    <label>New Tracking ID *</label>
-                                                    <input
-                                                        type="text"
-                                                        className="form-control"
-                                                        placeholder="1Z999AA10123456784"
-                                                        value={formData.trackingId}
-                                                        onChange={(e) => setFormData({...formData, trackingId: e.target.value})}
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                        
-                                        <div className="form-group">
-                                            <label>Resolution Status *</label>
-                                            <select className="form-control" value={formData.resolutionStatus} onChange={(e) => setFormData({...formData, resolutionStatus: e.target.value})}>
-                                                <option value="resolved">✅ Resolved</option>
-                                                <option value="pending">⏳ Pending</option>
-                                                <option value="escalated">⚠️ Escalated</option>
-                                            </select>
-                                        </div>
-                                        
-                                        <button type="submit" className="btn btn-success" style={{width: '100%', padding: '1rem', fontSize: '1.125rem'}}>
-                                            ✅ Log Customer Call
-                                        </button>
-                                    </form>
-                                </div>
-                            ) : (
-                                <div className="card">
-                                    <h2 style={{marginBottom: '1.5rem'}}>My Call History - Last 30 Days</h2>
-                                    {loading && <div className="info">Loading call history...</div>}
-                                    {!loading && callLogs.length === 0 && (
-                                        <div className="info">No calls logged yet. Start logging calls from the "Log Call" tab!</div>
-                                    )}
-                                    {!loading && callLogs.length > 0 && (
-                                        <div style={{overflowX: 'auto'}}>
-                                            <table>
-                                                <thead>
-                                                    <tr>
-                                                        <th>Date/Time</th>
-                                                        <th>Customer</th>
-                                                        <th>Order #</th>
-                                                        <th>Country</th>
-                                                        <th>Reason</th>
-                                                        <th>Resolution</th>
-                                                        <th>Refund</th>
-                                                        <th>Tracking</th>
-                                                        <th>Status</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {callLogs.map((log, index) => (
-                                                        <tr key={index}>
-                                                            <td>{log.date}<br/><small>{log.time}</small></td>
-                                                            <td>
-                                                                <strong>{log.customerName}</strong><br/>
-                                                                <small>{log.email}</small><br/>
-                                                                <small>{log.phoneNumber}</small>
-                                                            </td>
-                                                            <td>{log.orderNumber}</td>
-                                                            <td>{log.country}</td>
-                                                            <td>{log.reasonForCall === 'Other' ? log.otherReason : log.reasonForCall}</td>
-                                                            <td>{log.resolution}</td>
-                                                            <td>
-                                                                {log.refundIssued === 'yes' ? (
-                                                                    <span style={{color: '#10b981'}}>✅ {log.refundAmount}</span>
-                                                                ) : (
-                                                                    <span style={{color: '#6b7280'}}>No</span>
-                                                                )}
-                                                            </td>
-                                                            <td>
-                                                                {log.trackingAssigned === 'yes' ? (
-                                                                    <span style={{color: '#10b981'}}>✅ {log.trackingId}</span>
-                                                                ) : (
-                                                                    <span style={{color: '#6b7280'}}>No</span>
-                                                                )}
-                                                            </td>
-                                                            <td>
-                                                                {log.resolutionStatus === 'resolved' && <span className="badge badge-success">Resolved</span>}
-                                                                {log.resolutionStatus === 'pending' && <span className="badge badge-warning">Pending</span>}
-                                                                {log.resolutionStatus === 'escalated' && <span className="badge badge-danger">Escalated</span>}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                                    </td>
+                                                    <td style={{fontSize: '0.8rem'}}>
+                                                        {ticket.reasonForCall === 'add_remove' && 'Add/Remove Items'}
+                                                        {ticket.reasonForCall === 'change_details' && 'Change Details'}
+                                                        {ticket.reasonForCall === 'tracking' && 'Order Tracking'}
+                                                        {ticket.reasonForCall === 'problem_delivered' && 'Delivered Problem'}
+                                                        {ticket.generalQuery && 'General Inquiry'}
+                                                    </td>
+                                                    <td>
+                                                        {ticket.status === 'escalated' && <span className="badge badge-escalated">Escalated</span>}
+                                                        {ticket.status === 'resolved' && <span className="badge badge-resolved">Resolved</span>}
+                                                    </td>
+                                                    <td>
+                                                        <button
+                                                            className="btn btn-primary btn-sm"
+                                                            onClick={() => setSelectedTicket(ticket)}
+                                                        >
+                                                            View Details
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
                         </div>
+                        
+                        {/* Ticket Detail Modal */}
+                        {selectedTicket && (
+                            <div style={{
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                background: 'rgba(0,0,0,0.8)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 1000,
+                                padding: '2rem'
+                            }}>
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                                    borderRadius: '12px',
+                                    maxWidth: '800px',
+                                    width: '100%',
+                                    maxHeight: '90vh',
+                                    overflow: 'auto',
+                                    border: '1px solid rgba(71, 85, 105, 0.5)'
+                                }}>
+                                    <div style={{
+                                        padding: '2rem',
+                                        borderBottom: '1px solid rgba(71, 85, 105, 0.5)',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}>
+                                        <h2 style={{fontSize: '1.5rem'}}>Ticket Details</h2>
+                                        <button
+                                            onClick={() => setSelectedTicket(null)}
+                                            className="btn btn-secondary btn-sm"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                    
+                                    <div style={{padding: '2rem'}}>
+                                        <div className="ticket-detail">
+                                            <div className="ticket-detail-row">
+                                                <span className="ticket-detail-label">Date/Time:</span>
+                                                <span className="ticket-detail-value">
+                                                    {selectedTicket.timestamp ? new Date(selectedTicket.timestamp).toLocaleString() : 'N/A'}
+                                                </span>
+                                            </div>
+                                            <div className="ticket-detail-row">
+                                                <span className="ticket-detail-label">Phone:</span>
+                                                <span className="ticket-detail-value">{selectedTicket.phoneNumber}</span>
+                                            </div>
+                                            <div className="ticket-detail-row">
+                                                <span className="ticket-detail-label">Country:</span>
+                                                <span className="ticket-detail-value">{selectedTicket.country}</span>
+                                            </div>
+                                            <div className="ticket-detail-row">
+                                                <span className="ticket-detail-label">Order Number:</span>
+                                                <span className="ticket-detail-value">{selectedTicket.orderNumber}</span>
+                                            </div>
+                                            <div className="ticket-detail-row">
+                                                <span className="ticket-detail-label">Type:</span>
+                                                <span className="ticket-detail-value">
+                                                    {selectedTicket.orderPlaced ? 'Order Issue' : 'General Inquiry'}
+                                                </span>
+                                            </div>
+                                            <div className="ticket-detail-row">
+                                                <span className="ticket-detail-label">Status:</span>
+                                                <span className="ticket-detail-value">
+                                                    {selectedTicket.status === 'escalated' && <span className="badge badge-escalated">Escalated</span>}
+                                                    {selectedTicket.status === 'resolved' && <span className="badge badge-resolved">Resolved</span>}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style={{marginTop: '1.5rem'}}>
+                                            <h3 style={{marginBottom: '1rem', fontSize: '1.125rem'}}>Conversation Summary</h3>
+                                            <div className="ticket-detail">
+                                                <p style={{color: '#cbd5e1', lineHeight: 1.6, whiteSpace: 'pre-wrap'}}>
+                                                    {selectedTicket.agentNotes || 'No conversation summary provided'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style={{marginTop: '1.5rem'}}>
+                                            <h3 style={{marginBottom: '1rem', fontSize: '1.125rem'}}>Resolution Details</h3>
+                                            <div className="ticket-detail">
+                                                <p style={{color: '#cbd5e1', lineHeight: 1.6}}>
+                                                    {selectedTicket.resolution || 'No resolution details available'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        {selectedTicket.refundAmount && (
+                                            <div className="alert alert-warning" style={{marginTop: '1.5rem'}}>
+                                                <strong>Refund Amount:</strong> ${selectedTicket.refundAmount.toFixed(2)}
+                                            </div>
+                                        )}
+                                        
+                                        {selectedTicket.status === 'escalated' && (
+                                            <div style={{marginTop: '2rem', display: 'flex', gap: '1rem'}}>
+                                                <button
+                                                    className="btn btn-success"
+                                                    onClick={() => {
+                                                        const notes = prompt('Add manager notes (optional):');
+                                                        updateTicketStatus(selectedTicket.id, 'resolved', notes || '');
+                                                    }}
+                                                    style={{flex: 1}}
+                                                >
+                                                    Mark as Resolved
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
             }
-            
-            return (
-                <div>
-                    <div className="header">
-                        <h1>📊 Customer Service - Manager Dashboard</h1>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
-                            {SHOPIFY_CONFIG.enabled && (
-                                <div style={{fontSize: '0.75rem', color: '#96bf48'}}>
-                                    🛍️ 3 Stores Connected
-                                </div>
-                            )}
-                            <span>Welcome, {currentUser.name}</span>
-                            <button className="btn btn-logout" onClick={handleLogout}>Logout</button>
-                        </div>
-                    </div>
-                    <div className="container">
-                        <div className="tabs">
-                            <button className={`tab ${managerTab === 'calls' ? 'active' : ''}`} onClick={() => { setManagerTab('calls'); loadData(); }}>
-                                📞 Call Logs ({callLogs.length})
-                            </button>
-                            <button className={`tab ${managerTab === 'templates' ? 'active' : ''}`} onClick={() => setManagerTab('templates')}>
-                                📝 Resolution Templates
-                            </button>
-                        </div>
-                        
-                        {managerTab === 'calls' && (
-                            <div>
-                                <div className="stats-grid">
-                                    <div className="stat-card" style={{background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)'}}>
-                                        <div className="stat-label">Total Calls</div>
-                                        <div className="stat-value" style={{color: '#3b82f6'}}>{totalCalls}</div>
-                                    </div>
-                                    <div className="stat-card" style={{background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)'}}>
-                                        <div className="stat-label">Resolved</div>
-                                        <div className="stat-value" style={{color: '#10b981'}}>{resolvedCalls}</div>
-                                    </div>
-                                    <div className="stat-card" style={{background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)'}}>
-                                        <div className="stat-label">Pending</div>
-                                        <div className="stat-value" style={{color: '#fbbf24'}}>{pendingCalls}</div>
-                                    </div>
-                                    <div className="stat-card" style={{background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)'}}>
-                                        <div className="stat-label">Escalated</div>
-                                        <div className="stat-value" style={{color: '#ef4444'}}>{escalatedCalls}</div>
-                                    </div>
-                                </div>
-                                
-                                <div className="card">
-                                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
-                                        <h2 style={{margin: 0}}>🎯 Filters</h2>
-                                        <button 
-                                            className="btn btn-logout" 
-                                            onClick={() => {
-                                                setSearchTerm('');
-                                                setFilterEmployee('all');
-                                                setFilterDate('all');
-                                                setFilterStatus('all');
-                                                setFilterStore('all');
-                                                setFilterReason('all');
-                                                setFilterRefund('all');
-                                                setFilterTracking('all');
-                                                setFilterDataSource('all');
-                                                setDateFrom('');
-                                                setDateTo('');
-                                            }}
-                                            style={{padding: '0.5rem 1rem', fontSize: '0.875rem'}}
-                                        >
-                                            Clear All Filters
-                                        </button>
-                                    </div>
-                                    
-                                    {/* Row 1: Basic Filters */}
-                                    <div className="filter-grid">
-                                        <div className="form-group">
-                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Search</label>
-                                            <input type="text" className="form-control" placeholder="Customer, order, email, phone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                                        </div>
-                                        <div className="form-group">
-                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Agent</label>
-                                            <select className="form-control" value={filterEmployee} onChange={(e) => setFilterEmployee(e.target.value)}>
-                                                <option value="all">All Agents</option>
-                                                {employees.map(emp => (
-                                                    <option key={emp.id} value={emp.id}>{emp.name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="form-group">
-                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Date Range</label>
-                                            <select className="form-control" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}>
-                                                <option value="all">All Time</option>
-                                                <option value="today">Today</option>
-                                                <option value="week">This Week</option>
-                                                <option value="month">This Month</option>
-                                                <option value="custom">Custom Range...</option>
-                                            </select>
-                                        </div>
-                                        <div className="form-group">
-                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Status</label>
-                                            <select className="form-control" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                                                <option value="all">All Status</option>
-                                                <option value="resolved">✅ Resolved</option>
-                                                <option value="pending">⏳ Pending</option>
-                                                <option value="escalated">⚠️ Escalated</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Custom Date Range Pickers */}
-                                    {filterDate === 'custom' && (
-                                        <div className="grid-2" style={{marginTop: '0.5rem', marginBottom: '0.5rem'}}>
-                                            <div className="form-group">
-                                                <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>From Date</label>
-                                                <input type="date" className="form-control" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-                                            </div>
-                                            <div className="form-group">
-                                                <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>To Date</label>
-                                                <input type="date" className="form-control" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-                                            </div>
-                                        </div>
-                                    )}
-                                    
-                                    {/* Row 2: Advanced Filters */}
-                                    <div className="filter-grid" style={{marginTop: '0.5rem'}}>
-                                        <div className="form-group">
-                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Store/Region</label>
-                                            <select className="form-control" value={filterStore} onChange={(e) => setFilterStore(e.target.value)}>
-                                                <option value="all">All Stores</option>
-                                                <option value="us_canada">🇺🇸 US & Canada</option>
-                                                <option value="india">🇮🇳 India</option>
-                                                <option value="international">🌍 International</option>
-                                            </select>
-                                        </div>
-                                        <div className="form-group">
-                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Reason</label>
-                                            <select className="form-control" value={filterReason} onChange={(e) => setFilterReason(e.target.value)}>
-                                                <option value="all">All Reasons</option>
-                                                <option value="Order Tracking Inquiry">Order Tracking</option>
-                                                <option value="Order Cancellation">Order Cancellation</option>
-                                                <option value="Add/Remove/Change items in order">Add/Remove/Change</option>
-                                                <option value="Other">Other</option>
-                                            </select>
-                                        </div>
-                                        <div className="form-group">
-                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Refund</label>
-                                            <select className="form-control" value={filterRefund} onChange={(e) => setFilterRefund(e.target.value)}>
-                                                <option value="all">All</option>
-                                                <option value="yes">✅ Refunded</option>
-                                                <option value="no">No Refund</option>
-                                            </select>
-                                        </div>
-                                        <div className="form-group">
-                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Tracking</label>
-                                            <select className="form-control" value={filterTracking} onChange={(e) => setFilterTracking(e.target.value)}>
-                                                <option value="all">All</option>
-                                                <option value="yes">✅ New Tracking</option>
-                                                <option value="no">No New Tracking</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Row 3: Data Source Filter */}
-                                    <div style={{marginTop: '0.5rem'}}>
-                                        <div className="form-group">
-                                            <label style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Data Source</label>
-                                            <select className="form-control" value={filterDataSource} onChange={(e) => setFilterDataSource(e.target.value)} style={{maxWidth: '300px'}}>
-                                                <option value="all">All Sources</option>
-                                                <option value="shopify">🛍️ Shopify Auto-Fill</option>
-                                                <option value="manual">✍️ Manual Entry</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Active Filters Count */}
-                                    {(searchTerm || filterEmployee !== 'all' || filterDate !== 'all' || filterStatus !== 'all' || 
-                                      filterStore !== 'all' || filterReason !== 'all' || filterRefund !== 'all' || 
-                                      filterTracking !== 'all' || filterDataSource !== 'all') && (
-                                        <div style={{marginTop: '1rem', padding: '0.75rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '6px', fontSize: '0.875rem', color: '#60a5fa'}}>
-                                            🎯 Active filters applied • Showing {filteredLogs.length} of {callLogs.length} calls
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                <div className="card">
-                                    <h2 style={{marginBottom: '1rem'}}>Call Logs ({filteredLogs.length})</h2>
-                                    {loading && <div className="info">Loading...</div>}
-                                    {!loading && filteredLogs.length === 0 && (
-                                        <div className="info">No calls found matching your filters.</div>
-                                    )}
-                                    {!loading && filteredLogs.length > 0 && (
-                                        <div style={{overflowX: 'auto'}}>
-                                            <table>
-                                                <thead>
-                                                    <tr>
-                                                        <th>Date/Time</th>
-                                                        <th>Agent</th>
-                                                        <th>Customer</th>
-                                                        <th>Order #</th>
-                                                        <th>Country</th>
-                                                        <th>Reason</th>
-                                                        <th>Resolution</th>
-                                                        <th>Refund</th>
-                                                        <th>Tracking</th>
-                                                        <th>Status</th>
-                                                        <th>Shopify</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {filteredLogs.map((log, index) => (
-                                                        <tr key={index}>
-                                                            <td>{log.date}<br/><small>{log.time}</small></td>
-                                                            <td><strong>{log.agentName}</strong></td>
-                                                            <td>
-                                                                <strong>{log.customerName}</strong><br/>
-                                                                <small>{log.email}</small><br/>
-                                                                <small>{log.phoneNumber}</small>
-                                                            </td>
-                                                            <td>{log.orderNumber}</td>
-                                                            <td>{log.country}</td>
-                                                            <td>{log.reasonForCall === 'Other' ? log.otherReason : log.reasonForCall}</td>
-                                                            <td>{log.resolution}</td>
-                                                            <td>
-                                                                {log.refundIssued === 'yes' ? (
-                                                                    <span style={{color: '#10b981'}}>✅ {log.refundAmount}</span>
-                                                                ) : (
-                                                                    <span style={{color: '#6b7280'}}>No</span>
-                                                                )}
-                                                            </td>
-                                                            <td>
-                                                                {log.trackingAssigned === 'yes' ? (
-                                                                    <span style={{color: '#10b981'}}>✅ {log.trackingId}</span>
-                                                                ) : (
-                                                                    <span style={{color: '#6b7280'}}>No</span>
-                                                                )}
-                                                            </td>
-                                                            <td>
-                                                                {log.resolutionStatus === 'resolved' && <span className="badge badge-success">Resolved</span>}
-                                                                {log.resolutionStatus === 'pending' && <span className="badge badge-warning">Pending</span>}
-                                                                {log.resolutionStatus === 'escalated' && <span className="badge badge-danger">Escalated</span>}
-                                                            </td>
-                                                            <td>
-                                                                {log.loadedFromShopify ? (
-                                                                    <span style={{fontSize: '0.75rem', color: '#96bf48'}}>🛍️ {log.shopifyStore}</span>
-                                                                ) : (
-                                                                    <span style={{fontSize: '0.75rem', color: '#6b7280'}}>Manual</span>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                        
-                        {managerTab === 'templates' && (
-                            <div className="card">
-                                <h2 style={{marginBottom: '1rem'}}>Resolution Templates Editor</h2>
-                                <p style={{color: '#94a3b8', marginBottom: '2rem'}}>Customize the resolution templates that agents can select when logging calls.</p>
-                                
-                                {Object.keys(resolutionTemplates).map(reason => (
-                                    <div key={reason} style={{marginBottom: '2rem', padding: '1.5rem', background: 'rgba(30, 41, 59, 0.4)', borderRadius: '8px'}}>
-                                        <h3 style={{marginBottom: '1rem', color: '#3b82f6'}}>{reason}</h3>
-                                        {resolutionTemplates[reason].map((template, index) => (
-                                            <div key={index} className="form-group">
-                                                <label>Resolution {index + 1}</label>
-                                                <input 
-                                                    type="text" 
-                                                    className="form-control" 
-                                                    value={template} 
-                                                    onChange={(e) => {
-                                                        const updated = {...resolutionTemplates};
-                                                        updated[reason][index] = e.target.value;
-                                                        setResolutionTemplates(updated);
-                                                    }}
-                                                />
-                                            </div>
-                                        ))}
-                                        <button 
-                                            className="btn btn-primary" 
-                                            onClick={() => {
-                                                const updated = {...resolutionTemplates};
-                                                updated[reason].push('New resolution template');
-                                                setResolutionTemplates(updated);
-                                            }}
-                                            style={{marginTop: '0.5rem'}}
-                                        >
-                                            + Add Template
-                                        </button>
-                                    </div>
-                                ))}
-                                
-                                {success && <div className="success">{success}</div>}
-                                <button className="btn btn-success" onClick={saveTemplates} style={{width: '100%', padding: '1rem'}}>
-                                    💾 Save All Templates
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
         }
         
         const root = ReactDOM.createRoot(document.getElementById('app'));
