@@ -228,6 +228,7 @@
         .badge-pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
         .badge-resolved { background: rgba(16, 185, 129, 0.2); color: #10b981; }
         .badge-escalated { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .badge-pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
         .stats-grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
@@ -332,6 +333,27 @@
         .ticket-detail-value {
             color: white;
         }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+        .modal-content {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -378,6 +400,24 @@
             const [tickets, setTickets] = useState([]);
             const [loading, setLoading] = useState(false);
             
+            // Agent authentication
+            const [agentUsername, setAgentUsername] = useState('');
+            const [agentLoginInput, setAgentLoginInput] = useState('');
+            const [agentPassword, setAgentPassword] = useState('');
+            const [loginError, setLoginError] = useState('');
+            const [loginLoading, setLoginLoading] = useState(false);
+            
+            // Agent ticket history
+            const [agentView, setAgentView] = useState('newTicket'); // 'newTicket' or 'history'
+            const [agentTickets, setAgentTickets] = useState([]);
+            const [editingTicket, setEditingTicket] = useState(null);
+            
+            // Manager filters and search
+            const [searchQuery, setSearchQuery] = useState('');
+            const [filterCountry, setFilterCountry] = useState('All');
+            const [filterDate, setFilterDate] = useState('All');
+            const [sortOrder, setSortOrder] = useState('newest');
+            
             // Form state
             const [step, setStep] = useState(1);
             const [orderPlaced, setOrderPlaced] = useState(null);
@@ -419,6 +459,7 @@
             // Manager view
             const [managerTab, setManagerTab] = useState('escalated');
             const [selectedTicket, setSelectedTicket] = useState(null);
+            const [managerResolutionNotes, setManagerResolutionNotes] = useState('');
             
             useEffect(() => {
                 if (view === 'manager') {
@@ -437,9 +478,56 @@
                         ...doc.data()
                     }));
                     
-                    setTickets(ticketsData);
+                    // Filter out resolved tickets older than 30 days
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                    
+                    const filteredTickets = ticketsData.filter(ticket => {
+                        // Keep all non-resolved tickets (escalated, pending, etc.)
+                        if (ticket.status !== 'resolved') {
+                            return true;
+                        }
+                        
+                        // For resolved tickets, only keep those from last 30 days
+                        if (ticket.timestamp) {
+                            const ticketDate = new Date(ticket.timestamp);
+                            return ticketDate >= thirtyDaysAgo;
+                        }
+                        
+                        // If no timestamp, keep it (safety fallback)
+                        return true;
+                    });
+                    
+                    setTickets(filteredTickets);
                 } catch (error) {
                     console.error('Error loading tickets:', error);
+                }
+            };
+            
+            const loadAgentTickets = async () => {
+                if (!agentUsername) return;
+                
+                try {
+                    const snapshot = await db.collection('customerServiceTickets')
+                        .where('agentUsername', '==', agentUsername)
+                        .get();
+                    
+                    const ticketsData = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    
+                    // Sort by timestamp in JavaScript (newest first)
+                    ticketsData.sort((a, b) => {
+                        const dateA = new Date(a.timestamp || 0);
+                        const dateB = new Date(b.timestamp || 0);
+                        return dateB - dateA; // Newest first
+                    });
+                    
+                    setAgentTickets(ticketsData);
+                } catch (error) {
+                    console.error('Error loading agent tickets:', error);
+                    alert('Error loading tickets: ' + error.message);
                 }
             };
             
@@ -673,7 +761,8 @@
                         orderNumber: orderNumber || 'N/A',
                         phoneNumber,
                         timestamp: new Date().toISOString(),
-                        agentNotes
+                        agentNotes,
+                        agentUsername: agentUsername // Track which agent created the ticket
                     };
                     
                     // Try to add server timestamp, but don't fail if permissions don't allow it
@@ -797,6 +886,120 @@
                 }
             };
             
+            const handleAgentLogin = async (e) => {
+                e.preventDefault();
+                setLoginError('');
+                setLoginLoading(true);
+                
+                try {
+                    const username = agentLoginInput.trim();
+                    const password = agentPassword.trim();
+                    
+                    if (!username || !password) {
+                        setLoginError('Please enter both username and password');
+                        setLoginLoading(false);
+                        return;
+                    }
+                    
+                    // Check credentials against employees collection in Firebase
+                    const employeesSnapshot = await db.collection('employees')
+                        .where('username', '==', username)
+                        .get();
+                    
+                    if (employeesSnapshot.empty) {
+                        setLoginError('Invalid username or password');
+                        setLoginLoading(false);
+                        return;
+                    }
+                    
+                    const employeeDoc = employeesSnapshot.docs[0];
+                    const employee = employeeDoc.data();
+                    
+                    // Verify password
+                    if (employee.password !== password) {
+                        setLoginError('Invalid username or password');
+                        setLoginLoading(false);
+                        return;
+                    }
+                    
+                    // Login successful
+                    setAgentUsername(employee.name || username);
+                    setLoginError('');
+                } catch (error) {
+                    console.error('Login error:', error);
+                    setLoginError('Login failed. Please try again.');
+                } finally {
+                    setLoginLoading(false);
+                }
+            };
+            
+            const handleAgentLogout = () => {
+                setAgentUsername('');
+                setAgentLoginInput('');
+                setAgentPassword('');
+                setView('roleSelect');
+                resetForm();
+            };
+            
+            // Filter tickets based on search and filters
+            const getFilteredTickets = () => {
+                let filtered = tickets;
+                
+                // Filter by tab
+                if (managerTab === 'escalated') {
+                    filtered = filtered.filter(t => t.status === 'escalated');
+                } else if (managerTab === 'resolved') {
+                    filtered = filtered.filter(t => t.status === 'resolved');
+                } else if (managerTab === 'pending') {
+                    filtered = filtered.filter(t => t.status === 'pending');
+                }
+                
+                // Filter by search query
+                if (searchQuery.trim()) {
+                    const query = searchQuery.toLowerCase();
+                    filtered = filtered.filter(t => 
+                        (t.orderNumber && t.orderNumber.toLowerCase().includes(query)) ||
+                        (t.phoneNumber && t.phoneNumber.includes(query)) ||
+                        (t.agentUsername && t.agentUsername.toLowerCase().includes(query)) ||
+                        (t.agentNotes && t.agentNotes.toLowerCase().includes(query))
+                    );
+                }
+                
+                // Filter by country
+                if (filterCountry !== 'All') {
+                    filtered = filtered.filter(t => t.country === filterCountry);
+                }
+                
+                // Filter by date
+                if (filterDate !== 'All') {
+                    const now = new Date();
+                    filtered = filtered.filter(t => {
+                        const ticketDate = new Date(t.timestamp);
+                        const diffDays = Math.floor((now - ticketDate) / (1000 * 60 * 60 * 24));
+                        
+                        if (filterDate === 'Today') return diffDays === 0;
+                        if (filterDate === 'Yesterday') return diffDays === 1;
+                        if (filterDate === 'Last 7 Days') return diffDays <= 7;
+                        if (filterDate === 'Last 30 Days') return diffDays <= 30;
+                        return true;
+                    });
+                }
+                
+                // Sort tickets
+                filtered.sort((a, b) => {
+                    const dateA = new Date(a.timestamp || 0);
+                    const dateB = new Date(b.timestamp || 0);
+                    
+                    if (sortOrder === 'newest') {
+                        return dateB - dateA; // Newest first
+                    } else {
+                        return dateA - dateB; // Oldest first
+                    }
+                });
+                
+                return filtered;
+            };
+            
             // Role Selection View
             if (view === 'roleSelect') {
                 return (
@@ -828,17 +1031,100 @@
             
             // Agent View
             if (view === 'agent') {
+                // If agent not logged in, show login screen
+                if (!agentUsername) {
+                    return (
+                        <div>
+                            <div className="header">
+                                <h1>Agent Login</h1>
+                                <div className="header-right">
+                                    <button className="btn btn-secondary" onClick={() => setView('roleSelect')}>
+                                        Back
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="container">
+                                <div style={{maxWidth: '500px', margin: '0 auto', padding: '2rem'}}>
+                                    <div className="card">
+                                        <h2 style={{marginBottom: '1.5rem', textAlign: 'center'}}>Agent Login</h2>
+                                        <form onSubmit={handleAgentLogin}>
+                                            <div className="form-group">
+                                                <label>Username *</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    value={agentLoginInput}
+                                                    onChange={(e) => setAgentLoginInput(e.target.value)}
+                                                    placeholder="Enter your username"
+                                                    autoFocus
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Password *</label>
+                                                <input
+                                                    type="password"
+                                                    className="form-control"
+                                                    value={agentPassword}
+                                                    onChange={(e) => setAgentPassword(e.target.value)}
+                                                    placeholder="Enter your password"
+                                                    required
+                                                />
+                                            </div>
+                                            {loginError && (
+                                                <div className="alert alert-error" style={{marginTop: '1rem'}}>
+                                                    ⚠️ {loginError}
+                                                </div>
+                                            )}
+                                            <button 
+                                                type="submit" 
+                                                className="btn btn-primary" 
+                                                style={{width: '100%', marginTop: '1.5rem'}}
+                                                disabled={loginLoading}
+                                            >
+                                                {loginLoading ? 'Logging in...' : 'Login'}
+                                            </button>
+                                        </form>
+                                        <p style={{textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem', marginTop: '1.5rem'}}>
+                                            🔒 Same credentials as main employee portal
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+                
+                // Agent is logged in, show ticket creation form
                 return (
                     <div>
                         <div className="header">
-                            <h1>Agent - New Ticket</h1>
+                            <h1>{agentView === 'newTicket' ? 'Agent - New Ticket' : 'Agent - Ticket History'}</h1>
                             <div className="header-right">
-                                <button className="btn btn-secondary" onClick={() => setView('roleSelect')}>
-                                    Back
+                                <span style={{color: '#cbd5e1', marginRight: '1rem'}}>
+                                    👤 {agentUsername}
+                                </span>
+                                <button 
+                                    className="btn btn-secondary" 
+                                    onClick={() => {
+                                        if (agentView === 'newTicket') {
+                                            loadAgentTickets();
+                                            setAgentView('history');
+                                        } else {
+                                            setAgentView('newTicket');
+                                        }
+                                    }}
+                                    style={{marginRight: '1rem'}}
+                                >
+                                    {agentView === 'newTicket' ? '📋 Ticket History' : '➕ New Ticket'}
+                                </button>
+                                <button className="btn btn-secondary" onClick={handleAgentLogout}>
+                                    Logout
                                 </button>
                             </div>
                         </div>
                         
+                        {agentView === 'newTicket' ? (
                         <div className="container">
                             {successMessage && (
                                 <div className="alert alert-success">
@@ -1382,6 +1668,167 @@
                                 </div>
                             </div>
                         </div>
+                        ) : (
+                        <div className="container">
+                            {/* Ticket History View */}
+                            <div className="card">
+                                <h2 style={{marginBottom: '1.5rem'}}>My Ticket History</h2>
+                                
+                                {agentTickets.length === 0 ? (
+                                    <div style={{textAlign: 'center', padding: '3rem', color: '#94a3b8'}}>
+                                        <svg style={{width: '64px', height: '64px', margin: '0 auto 1rem', opacity: 0.5}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                        </svg>
+                                        <p>No tickets found</p>
+                                    </div>
+                                ) : (
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Date/Time</th>
+                                                <th>Order #</th>
+                                                <th>Phone</th>
+                                                <th>Country</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {agentTickets.map(ticket => (
+                                                <tr key={ticket.id}>
+                                                    <td>
+                                                        {ticket.timestamp ? new Date(ticket.timestamp).toLocaleString('en-US', {
+                                                            month: 'short',
+                                                            day: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        }) : 'N/A'}
+                                                    </td>
+                                                    <td style={{fontWeight: 600}}>{ticket.orderNumber}</td>
+                                                    <td>{ticket.phoneNumber}</td>
+                                                    <td>{ticket.country}</td>
+                                                    <td>
+                                                        {ticket.status === 'escalated' && <span className="badge badge-escalated">Escalated</span>}
+                                                        {ticket.status === 'resolved' && <span className="badge badge-resolved">Resolved</span>}
+                                                        {ticket.status === 'pending' && <span className="badge badge-pending">Pending</span>}
+                                                    </td>
+                                                    <td>
+                                                        <button
+                                                            className="btn btn-primary btn-sm"
+                                                            onClick={() => setEditingTicket(ticket)}
+                                                        >
+                                                            View/Edit
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                            
+                            {/* Edit Ticket Modal */}
+                            {editingTicket && (
+                                <div className="modal-overlay" onClick={() => setEditingTicket(null)}>
+                                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto'}}>
+                                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
+                                            <h2 style={{fontSize: '1.5rem'}}>Edit Ticket</h2>
+                                            <button
+                                                onClick={() => setEditingTicket(null)}
+                                                className="btn btn-secondary btn-sm"
+                                            >
+                                                Close
+                                            </button>
+                                        </div>
+                                        
+                                        <div className="form-group">
+                                            <label>Order Number</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={editingTicket.orderNumber}
+                                                onChange={(e) => setEditingTicket({...editingTicket, orderNumber: e.target.value})}
+                                            />
+                                        </div>
+                                        
+                                        <div className="form-group">
+                                            <label>Phone Number</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={editingTicket.phoneNumber}
+                                                onChange={(e) => setEditingTicket({...editingTicket, phoneNumber: e.target.value})}
+                                            />
+                                        </div>
+                                        
+                                        <div className="form-group">
+                                            <label>Country</label>
+                                            <select
+                                                className="form-select"
+                                                value={editingTicket.country}
+                                                onChange={(e) => setEditingTicket({...editingTicket, country: e.target.value})}
+                                            >
+                                                {COUNTRIES.map(c => (
+                                                    <option key={c} value={c}>{c}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        
+                                        <div className="form-group">
+                                            <label>Agent Notes / Conversation Summary</label>
+                                            <textarea
+                                                className="form-control"
+                                                value={editingTicket.agentNotes}
+                                                onChange={(e) => setEditingTicket({...editingTicket, agentNotes: e.target.value})}
+                                                rows="5"
+                                            />
+                                        </div>
+                                        
+                                        <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
+                                            <button
+                                                className="btn btn-primary"
+                                                onClick={async () => {
+                                                    try {
+                                                        await db.collection('customerServiceTickets').doc(editingTicket.id).update({
+                                                            orderNumber: editingTicket.orderNumber,
+                                                            phoneNumber: editingTicket.phoneNumber,
+                                                            country: editingTicket.country,
+                                                            agentNotes: editingTicket.agentNotes
+                                                        });
+                                                        alert('✅ Ticket updated successfully!');
+                                                        loadAgentTickets();
+                                                        setEditingTicket(null);
+                                                    } catch (error) {
+                                                        console.error('Error updating ticket:', error);
+                                                        alert('❌ Failed to update ticket');
+                                                    }
+                                                }}
+                                                style={{flex: 1}}
+                                            >
+                                                Save Changes
+                                            </button>
+                                            <button
+                                                className="btn btn-secondary"
+                                                onClick={() => setEditingTicket(null)}
+                                                style={{flex: 1}}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                        
+                                        <div style={{marginTop: '2rem', padding: '1rem', background: 'rgba(96, 165, 250, 0.1)', borderRadius: '8px'}}>
+                                            <p style={{fontSize: '0.875rem', color: '#94a3b8', marginBottom: '0.5rem'}}>
+                                                <strong>Status:</strong> {editingTicket.status}
+                                            </p>
+                                            <p style={{fontSize: '0.875rem', color: '#94a3b8', marginBottom: '0'}}>
+                                                <strong>Created:</strong> {editingTicket.timestamp ? new Date(editingTicket.timestamp).toLocaleString() : 'N/A'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        )}
                     </div>
                 );
             }
@@ -1391,7 +1838,7 @@
                 const escalatedTickets = tickets.filter(t => t.status === 'escalated');
                 const resolvedTickets = tickets.filter(t => t.status === 'resolved');
                 
-                const displayTickets = managerTab === 'escalated' ? escalatedTickets : tickets;
+                const displayTickets = getFilteredTickets();
                 
                 return (
                     <div>
@@ -1405,40 +1852,6 @@
                         </div>
                         
                         <div className="container">
-                            {/* Statistics */}
-                            <div className="stats-grid">
-                                <div className="stat-card" style={{borderLeft: '4px solid #ef4444'}}>
-                                    <div className="stat-label">Escalated Tickets</div>
-                                    <div className="stat-value">{escalatedTickets.length}</div>
-                                    <div className="stat-label">Needs attention</div>
-                                </div>
-                                
-                                <div className="stat-card" style={{borderLeft: '4px solid #10b981'}}>
-                                    <div className="stat-label">Resolved Tickets</div>
-                                    <div className="stat-value">{resolvedTickets.length}</div>
-                                    <div className="stat-label">Completed by agents</div>
-                                </div>
-                                
-                                <div className="stat-card" style={{borderLeft: '4px solid #60a5fa'}}>
-                                    <div className="stat-label">Total Tickets</div>
-                                    <div className="stat-value">{tickets.length}</div>
-                                    <div className="stat-label">All time</div>
-                                </div>
-                                
-                                <div className="stat-card" style={{borderLeft: '4px solid #fbbf24'}}>
-                                    <div className="stat-label">Today's Tickets</div>
-                                    <div className="stat-value">
-                                        {tickets.filter(t => {
-                                            if (!t.timestamp) return false;
-                                            const ticketDate = new Date(t.timestamp).toDateString();
-                                            const today = new Date().toDateString();
-                                            return ticketDate === today;
-                                        }).length}
-                                    </div>
-                                    <div className="stat-label">Created today</div>
-                                </div>
-                            </div>
-                            
                             {/* Tabs */}
                             <div className="tabs">
                                 <button
@@ -1448,11 +1861,103 @@
                                     Escalated ({escalatedTickets.length})
                                 </button>
                                 <button
+                                    className={`tab ${managerTab === 'pending' ? 'active' : ''}`}
+                                    onClick={() => setManagerTab('pending')}
+                                >
+                                    Pending ({tickets.filter(t => t.status === 'pending').length})
+                                </button>
+                                <button
+                                    className={`tab ${managerTab === 'resolved' ? 'active' : ''}`}
+                                    onClick={() => setManagerTab('resolved')}
+                                >
+                                    Resolved ({resolvedTickets.length})
+                                </button>
+                                <button
                                     className={`tab ${managerTab === 'all' ? 'active' : ''}`}
                                     onClick={() => setManagerTab('all')}
                                 >
                                     All Tickets ({tickets.length})
                                 </button>
+                            </div>
+                            
+                            {/* Info about resolved tickets retention */}
+                            {managerTab === 'resolved' && (
+                                <div style={{marginTop: '1rem', padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', fontSize: '0.875rem', color: '#94a3b8'}}>
+                                    ℹ️ Showing resolved tickets from the last 30 days. Older resolved tickets are automatically archived.
+                                </div>
+                            )}
+                            
+                            {/* Search and Filters */}
+                            <div className="card" style={{marginTop: '1.5rem', padding: '1.5rem'}}>
+                                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}}>
+                                    <div className="form-group" style={{marginBottom: 0}}>
+                                        <label style={{fontSize: '0.875rem', marginBottom: '0.5rem'}}>Search</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Order #, Phone, Agent..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            style={{padding: '0.75rem'}}
+                                        />
+                                    </div>
+                                    <div className="form-group" style={{marginBottom: 0}}>
+                                        <label style={{fontSize: '0.875rem', marginBottom: '0.5rem'}}>Country</label>
+                                        <select
+                                            className="form-select"
+                                            value={filterCountry}
+                                            onChange={(e) => setFilterCountry(e.target.value)}
+                                            style={{padding: '0.75rem'}}
+                                        >
+                                            <option value="All">All Countries</option>
+                                            {COUNTRIES.map(c => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="form-group" style={{marginBottom: 0}}>
+                                        <label style={{fontSize: '0.875rem', marginBottom: '0.5rem'}}>Date Range</label>
+                                        <select
+                                            className="form-select"
+                                            value={filterDate}
+                                            onChange={(e) => setFilterDate(e.target.value)}
+                                            style={{padding: '0.75rem'}}
+                                        >
+                                            <option value="All">All Time</option>
+                                            <option value="Today">Today</option>
+                                            <option value="Yesterday">Yesterday</option>
+                                            <option value="Last 7 Days">Last 7 Days</option>
+                                            <option value="Last 30 Days">Last 30 Days</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group" style={{marginBottom: 0}}>
+                                        <label style={{fontSize: '0.875rem', marginBottom: '0.5rem'}}>Sort By</label>
+                                        <select
+                                            className="form-select"
+                                            value={sortOrder}
+                                            onChange={(e) => setSortOrder(e.target.value)}
+                                            style={{padding: '0.75rem'}}
+                                        >
+                                            <option value="newest">Newest First</option>
+                                            <option value="oldest">Oldest First</option>
+                                        </select>
+                                    </div>
+                                    {(searchQuery || filterCountry !== 'All' || filterDate !== 'All') && (
+                                        <div style={{display: 'flex', alignItems: 'flex-end'}}>
+                                            <button
+                                                className="btn btn-secondary"
+                                                onClick={() => {
+                                                    setSearchQuery('');
+                                                    setFilterCountry('All');
+                                                    setFilterDate('All');
+                                                }}
+                                                style={{width: '100%'}}
+                                            >
+                                                Clear Filters
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             
                             {/* Tickets Table */}
@@ -1469,6 +1974,7 @@
                                         <thead>
                                             <tr>
                                                 <th>Date/Time</th>
+                                                <th>Agent</th>
                                                 <th>Phone</th>
                                                 <th>Country</th>
                                                 <th>Order #</th>
@@ -1488,6 +1994,18 @@
                                                             hour: '2-digit',
                                                             minute: '2-digit'
                                                         }) : 'N/A'}
+                                                    </td>
+                                                    <td>
+                                                        <span style={{
+                                                            padding: '0.25rem 0.5rem',
+                                                            background: 'rgba(59, 130, 246, 0.1)',
+                                                            borderRadius: '4px',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 600,
+                                                            color: '#60a5fa'
+                                                        }}>
+                                                            {ticket.agentUsername || 'Unknown'}
+                                                        </span>
                                                     </td>
                                                     <td>{ticket.phoneNumber}</td>
                                                     <td>{ticket.country}</td>
@@ -1509,11 +2027,15 @@
                                                     <td>
                                                         {ticket.status === 'escalated' && <span className="badge badge-escalated">Escalated</span>}
                                                         {ticket.status === 'resolved' && <span className="badge badge-resolved">Resolved</span>}
+                                                        {ticket.status === 'pending' && <span className="badge badge-pending">Pending</span>}
                                                     </td>
                                                     <td>
                                                         <button
                                                             className="btn btn-primary btn-sm"
-                                                            onClick={() => setSelectedTicket(ticket)}
+                                                            onClick={() => {
+                                                                setSelectedTicket(ticket);
+                                                                setManagerResolutionNotes('');
+                                                            }}
                                                         >
                                                             View Details
                                                         </button>
@@ -1575,6 +2097,21 @@
                                                 </span>
                                             </div>
                                             <div className="ticket-detail-row">
+                                                <span className="ticket-detail-label">Agent:</span>
+                                                <span className="ticket-detail-value">
+                                                    <span style={{
+                                                        padding: '0.25rem 0.75rem',
+                                                        background: 'rgba(59, 130, 246, 0.15)',
+                                                        borderRadius: '6px',
+                                                        fontSize: '0.875rem',
+                                                        fontWeight: 600,
+                                                        color: '#60a5fa'
+                                                    }}>
+                                                        👤 {selectedTicket.agentUsername || 'Unknown'}
+                                                    </span>
+                                                </span>
+                                            </div>
+                                            <div className="ticket-detail-row">
                                                 <span className="ticket-detail-label">Phone:</span>
                                                 <span className="ticket-detail-value">{selectedTicket.phoneNumber}</span>
                                             </div>
@@ -1597,6 +2134,7 @@
                                                 <span className="ticket-detail-value">
                                                     {selectedTicket.status === 'escalated' && <span className="badge badge-escalated">Escalated</span>}
                                                     {selectedTicket.status === 'resolved' && <span className="badge badge-resolved">Resolved</span>}
+                                                    {selectedTicket.status === 'pending' && <span className="badge badge-pending">Pending</span>}
                                                 </span>
                                             </div>
                                         </div>
@@ -1625,18 +2163,145 @@
                                             </div>
                                         )}
                                         
+                                        {/* Manager Actions */}
                                         {selectedTicket.status === 'escalated' && (
-                                            <div style={{marginTop: '2rem', display: 'flex', gap: '1rem'}}>
-                                                <button
-                                                    className="btn btn-success"
-                                                    onClick={() => {
-                                                        const notes = prompt('Add manager notes (optional):');
-                                                        updateTicketStatus(selectedTicket.id, 'resolved', notes || '');
-                                                    }}
-                                                    style={{flex: 1}}
-                                                >
-                                                    Mark as Resolved
-                                                </button>
+                                            <div style={{marginTop: '2rem'}}>
+                                                <h3 style={{marginBottom: '1rem', fontSize: '1.125rem'}}>Manager Actions</h3>
+                                                
+                                                {/* Resolution Details Text Area */}
+                                                <div className="form-group" style={{marginBottom: '1.5rem'}}>
+                                                    <label style={{fontWeight: 600, marginBottom: '0.5rem', display: 'block'}}>
+                                                        Resolution Details *
+                                                    </label>
+                                                    <textarea
+                                                        className="form-control"
+                                                        value={managerResolutionNotes}
+                                                        onChange={(e) => setManagerResolutionNotes(e.target.value)}
+                                                        placeholder="Describe how you resolved this ticket (required before marking as resolved)..."
+                                                        rows="4"
+                                                        style={{
+                                                            width: '100%',
+                                                            minHeight: '100px',
+                                                            resize: 'vertical'
+                                                        }}
+                                                    />
+                                                    <p style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem'}}>
+                                                        Required to mark ticket as resolved
+                                                    </p>
+                                                </div>
+                                                
+                                                <div style={{display: 'flex', gap: '1rem', flexWrap: 'wrap'}}>
+                                                    <button
+                                                        className="btn btn-success"
+                                                        onClick={() => {
+                                                            if (!managerResolutionNotes.trim()) {
+                                                                alert('⚠️ Please enter resolution details before marking as resolved');
+                                                                return;
+                                                            }
+                                                            updateTicketStatus(selectedTicket.id, 'resolved', managerResolutionNotes);
+                                                            setManagerResolutionNotes('');
+                                                        }}
+                                                        style={{flex: 1, minWidth: '200px'}}
+                                                    >
+                                                        ✓ Mark as Resolved
+                                                    </button>
+                                                    <button
+                                                        className="btn"
+                                                        onClick={() => {
+                                                            const notes = prompt('Add notes about why this is pending (optional):');
+                                                            updateTicketStatus(selectedTicket.id, 'pending', notes || '');
+                                                            setManagerResolutionNotes('');
+                                                        }}
+                                                        style={{
+                                                            flex: 1,
+                                                            minWidth: '200px',
+                                                            background: 'linear-gradient(to right, #f59e0b, #d97706)',
+                                                            color: 'white'
+                                                        }}
+                                                    >
+                                                        ⏳ Mark as Pending
+                                                    </button>
+                                                </div>
+                                                <p style={{marginTop: '0.75rem', fontSize: '0.875rem', color: '#94a3b8'}}>
+                                                    💡 Mark as Pending if waiting for customer response, additional info, or follow-up
+                                                </p>
+                                            </div>
+                                        )}
+                                        
+                                        {selectedTicket.status === 'pending' && (
+                                            <div style={{marginTop: '2rem'}}>
+                                                <h3 style={{marginBottom: '1rem', fontSize: '1.125rem'}}>Manager Actions</h3>
+                                                
+                                                {/* Resolution Details Text Area */}
+                                                <div className="form-group" style={{marginBottom: '1.5rem'}}>
+                                                    <label style={{fontWeight: 600, marginBottom: '0.5rem', display: 'block'}}>
+                                                        Resolution Details *
+                                                    </label>
+                                                    <textarea
+                                                        className="form-control"
+                                                        value={managerResolutionNotes}
+                                                        onChange={(e) => setManagerResolutionNotes(e.target.value)}
+                                                        placeholder="Describe how you resolved this ticket (required before marking as resolved)..."
+                                                        rows="4"
+                                                        style={{
+                                                            width: '100%',
+                                                            minHeight: '100px',
+                                                            resize: 'vertical'
+                                                        }}
+                                                    />
+                                                    <p style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem'}}>
+                                                        Required to mark ticket as resolved
+                                                    </p>
+                                                </div>
+                                                
+                                                <div style={{display: 'flex', gap: '1rem', flexWrap: 'wrap'}}>
+                                                    <button
+                                                        className="btn btn-success"
+                                                        onClick={() => {
+                                                            if (!managerResolutionNotes.trim()) {
+                                                                alert('⚠️ Please enter resolution details before marking as resolved');
+                                                                return;
+                                                            }
+                                                            updateTicketStatus(selectedTicket.id, 'resolved', managerResolutionNotes);
+                                                            setManagerResolutionNotes('');
+                                                        }}
+                                                        style={{flex: 1, minWidth: '200px'}}
+                                                    >
+                                                        ✓ Mark as Resolved
+                                                    </button>
+                                                    <button
+                                                        className="btn"
+                                                        onClick={() => {
+                                                            const notes = prompt('Add notes (optional):');
+                                                            updateTicketStatus(selectedTicket.id, 'escalated', notes || '');
+                                                            setManagerResolutionNotes('');
+                                                        }}
+                                                        style={{
+                                                            flex: 1,
+                                                            minWidth: '200px',
+                                                            background: 'linear-gradient(to right, #ef4444, #dc2626)',
+                                                            color: 'white'
+                                                        }}
+                                                    >
+                                                        ⚠️ Re-escalate
+                                                    </button>
+                                                </div>
+                                                <p style={{marginTop: '0.75rem', fontSize: '0.875rem', color: '#94a3b8'}}>
+                                                    💡 Resolve when complete, or re-escalate if needs immediate attention
+                                                </p>
+                                            </div>
+                                        )}
+                                        
+                                        {selectedTicket.status === 'resolved' && (
+                                            <div style={{marginTop: '2rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px'}}>
+                                                <p style={{color: '#10b981', fontSize: '0.875rem', marginBottom: '0.5rem'}}>
+                                                    ✓ This ticket has been resolved
+                                                </p>
+                                                {selectedTicket.managerNotes && (
+                                                    <p style={{color: '#cbd5e1', fontSize: '0.875rem'}}>
+                                                        Manager Notes: {selectedTicket.managerNotes}
+                                                    </p>
+                                                )}
                                             </div>
                                         )}
                                     </div>
