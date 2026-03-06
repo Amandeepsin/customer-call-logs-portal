@@ -354,6 +354,84 @@
             max-width: 600px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: 2px solid rgba(71, 85, 105, 0.5);
+            background: rgba(15, 23, 42, 0.4);
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        .filter-btn:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .filter-btn.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+            color: white;
+        }
+        .existing-ticket-warning {
+            background: rgba(245, 158, 11, 0.15);
+            border: 2px solid #f59e0b;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .existing-ticket-warning h3 {
+            color: #f59e0b;
+            margin-bottom: 1rem;
+            font-size: 1.125rem;
+        }
+        .existing-ticket-info {
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .existing-ticket-info p {
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        .existing-ticket-info p strong {
+            color: #cbd5e1;
+        }
+        .warning-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .password-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+        .password-toggle:hover {
+            color: #cbd5e1;
+        }
     </style>
 </head>
 <body>
@@ -398,19 +476,28 @@
         function App() {
             const [view, setView] = useState('roleSelect');
             const [tickets, setTickets] = useState([]);
+            const [statusFilter, setStatusFilter] = useState('all');
+            const [existingTicket, setExistingTicket] = useState(null);
             const [loading, setLoading] = useState(false);
             
             // Agent authentication
-            const [agentUsername, setAgentUsername] = useState('');
+            const [agentUsername, setAgentUsername] = useState(() => {
+                return sessionStorage.getItem('agentUsername') || '';
+            });
             const [agentLoginInput, setAgentLoginInput] = useState('');
             const [agentPassword, setAgentPassword] = useState('');
+            const [showPassword, setShowPassword] = useState(false);
             const [loginError, setLoginError] = useState('');
             const [loginLoading, setLoginLoading] = useState(false);
             
             // Agent ticket history
             const [agentView, setAgentView] = useState('newTicket'); // 'newTicket' or 'history'
             const [agentTickets, setAgentTickets] = useState([]);
+            const [allTickets, setAllTickets] = useState([]);
+            const [showAllTickets, setShowAllTickets] = useState(false);
             const [editingTicket, setEditingTicket] = useState(null);
+            const [agentSearchOrder, setAgentSearchOrder] = useState('');
+            const [agentStatusFilter, setAgentStatusFilter] = useState('all');
             
             // Manager filters and search
             const [searchQuery, setSearchQuery] = useState('');
@@ -466,6 +553,47 @@
                     loadTickets();
                 }
             }, [view]);
+            
+            // Check for existing ticket when order number changes
+            useEffect(() => {
+                const checkExistingTicket = async () => {
+                    if (!orderNumber || orderNumber.length < 3) {
+                        setExistingTicket(null);
+                        return;
+                    }
+                    
+                    try {
+                        const snapshot = await db.collection('customerServiceTickets')
+                            .where('orderNumber', '==', orderNumber)
+                            .limit(1)
+                            .get();
+                        
+                        if (!snapshot.empty) {
+                            const ticket = {
+                                id: snapshot.docs[0].id,
+                                ...snapshot.docs[0].data(),
+                                createdAt: snapshot.docs[0].data().createdAt?.toDate()
+                            };
+                            setExistingTicket(ticket);
+                        } else {
+                            setExistingTicket(null);
+                        }
+                    } catch (error) {
+                        console.error('Error checking existing ticket:', error);
+                    }
+                };
+                
+                const timeoutId = setTimeout(checkExistingTicket, 500);
+                return () => clearTimeout(timeoutId);
+            }, [orderNumber]);
+            
+            // Restore agent view if user is logged in via sessionStorage
+            useEffect(() => {
+                const savedUsername = sessionStorage.getItem('agentUsername');
+                if (savedUsername && view === 'roleSelect') {
+                    setView('agent');
+                }
+            }, []);
             
             const loadTickets = async () => {
                 try {
@@ -528,6 +656,58 @@
                 } catch (error) {
                     console.error('Error loading agent tickets:', error);
                     alert('Error loading tickets: ' + error.message);
+                }
+            };
+            
+            const loadAllTickets = async () => {
+                try {
+                    const snapshot = await db.collection('customerServiceTickets')
+                        .get();
+                    
+                    const ticketsData = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    
+                    // Sort by timestamp in JavaScript (newest first)
+                    ticketsData.sort((a, b) => {
+                        const dateA = new Date(a.timestamp || 0);
+                        const dateB = new Date(b.timestamp || 0);
+                        return dateB - dateA; // Newest first
+                    });
+                    
+                    setAllTickets(ticketsData);
+                } catch (error) {
+                    console.error('Error loading all tickets:', error);
+                    alert('Error loading all tickets: ' + error.message);
+                }
+            };
+            
+            const deleteTicket = async (ticketId) => {
+                if (!window.confirm('⚠️ Are you sure you want to delete this ticket? This action cannot be undone.')) {
+                    return;
+                }
+                
+                try {
+                    await db.collection('customerServiceTickets').doc(ticketId).delete();
+                    
+                    // Update local state to remove the ticket
+                    setTickets(tickets.filter(t => t.id !== ticketId));
+                    setAgentTickets(agentTickets.filter(t => t.id !== ticketId));
+                    setAllTickets(allTickets.filter(t => t.id !== ticketId));
+                    
+                    // Close modal if this ticket was open
+                    if (selectedTicket && selectedTicket.id === ticketId) {
+                        setSelectedTicket(null);
+                    }
+                    if (editingTicket && editingTicket.id === ticketId) {
+                        setEditingTicket(null);
+                    }
+                    
+                    alert('✅ Ticket deleted successfully');
+                } catch (error) {
+                    console.error('Error deleting ticket:', error);
+                    alert('❌ Error deleting ticket: ' + error.message);
                 }
             };
             
@@ -923,7 +1103,9 @@
                     }
                     
                     // Login successful
-                    setAgentUsername(employee.name || username);
+                    const loggedInUsername = employee.name || username;
+                    setAgentUsername(loggedInUsername);
+                    sessionStorage.setItem('agentUsername', loggedInUsername);
                     setLoginError('');
                 } catch (error) {
                     console.error('Login error:', error);
@@ -935,6 +1117,7 @@
             
             const handleAgentLogout = () => {
                 setAgentUsername('');
+                sessionStorage.removeItem('agentUsername');
                 setAgentLoginInput('');
                 setAgentPassword('');
                 setView('roleSelect');
@@ -1062,14 +1245,35 @@
                                             </div>
                                             <div className="form-group">
                                                 <label>Password *</label>
-                                                <input
-                                                    type="password"
-                                                    className="form-control"
-                                                    value={agentPassword}
-                                                    onChange={(e) => setAgentPassword(e.target.value)}
-                                                    placeholder="Enter your password"
-                                                    required
-                                                />
+                                                <div className="password-input-wrapper">
+                                                    <input
+                                                        type={showPassword ? "text" : "password"}
+                                                        className="form-control"
+                                                        value={agentPassword}
+                                                        onChange={(e) => setAgentPassword(e.target.value)}
+                                                        placeholder="Enter your password"
+                                                        required
+                                                        style={{paddingRight: '45px'}}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="password-toggle"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        tabIndex="-1"
+                                                    >
+                                                        {showPassword ? (
+                                                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                                                                <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                                                            </svg>
+                                                        ) : (
+                                                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                                <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                </div>
                                             </div>
                                             {loginError && (
                                                 <div className="alert alert-error" style={{marginTop: '1rem'}}>
@@ -1109,6 +1313,7 @@
                                     onClick={() => {
                                         if (agentView === 'newTicket') {
                                             loadAgentTickets();
+                                            loadAllTickets();
                                             setAgentView('history');
                                         } else {
                                             setAgentView('newTicket');
@@ -1233,6 +1438,98 @@
                                                 placeholder="Enter order number"
                                             />
                                         </div>
+                                        
+                                        {existingTicket && (
+                                            <div className="existing-ticket-warning">
+                                                <h3 style={{marginBottom: '1rem', fontSize: '1.125rem'}}>⚠️ Existing Ticket Found for This Order</h3>
+                                                
+                                                <div style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: 'repeat(2, 1fr)',
+                                                    gap: '0.75rem',
+                                                    marginBottom: '1rem'
+                                                }}>
+                                                    <div style={{
+                                                        padding: '0.75rem',
+                                                        background: 'rgba(15, 23, 42, 0.6)',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid rgba(245, 158, 11, 0.3)'
+                                                    }}>
+                                                        <p style={{fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Order Number</p>
+                                                        <p style={{fontSize: '1rem', fontWeight: 700, color: '#f59e0b'}}>{existingTicket.orderNumber || 'N/A'}</p>
+                                                    </div>
+                                                    
+                                                    <div style={{
+                                                        padding: '0.75rem',
+                                                        background: 'rgba(15, 23, 42, 0.6)',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid rgba(245, 158, 11, 0.3)'
+                                                    }}>
+                                                        <p style={{fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Phone Number</p>
+                                                        <p style={{fontSize: '1rem', fontWeight: 700, color: 'white'}}>{existingTicket.phoneNumber || 'N/A'}</p>
+                                                    </div>
+                                                    
+                                                    <div style={{
+                                                        padding: '0.75rem',
+                                                        background: 'rgba(15, 23, 42, 0.6)',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid rgba(245, 158, 11, 0.3)'
+                                                    }}>
+                                                        <p style={{fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Ticket Status</p>
+                                                        <p style={{marginTop: '0.25rem'}}>
+                                                            {existingTicket.status === 'escalated' && <span className="badge badge-escalated">Escalated</span>}
+                                                            {existingTicket.status === 'resolved' && <span className="badge badge-resolved">Resolved</span>}
+                                                            {existingTicket.status === 'pending' && <span className="badge badge-pending">Pending</span>}
+                                                        </p>
+                                                    </div>
+                                                    
+                                                    <div style={{
+                                                        padding: '0.75rem',
+                                                        background: 'rgba(15, 23, 42, 0.6)',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid rgba(245, 158, 11, 0.3)'
+                                                    }}>
+                                                        <p style={{fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Created By Agent</p>
+                                                        <p style={{fontSize: '1rem', fontWeight: 700, color: '#60a5fa'}}>{existingTicket.agentUsername || 'N/A'}</p>
+                                                    </div>
+                                                    
+                                                    <div style={{
+                                                        padding: '0.75rem',
+                                                        background: 'rgba(15, 23, 42, 0.6)',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                                                        gridColumn: 'span 2'
+                                                    }}>
+                                                        <p style={{fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Created Date</p>
+                                                        <p style={{fontSize: '0.875rem', fontWeight: 600, color: 'white'}}>
+                                                            {existingTicket.createdAt?.toLocaleDateString()} at {existingTicket.createdAt?.toLocaleTimeString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="warning-buttons">
+                                                    <button 
+                                                        className="btn btn-primary"
+                                                        onClick={() => {
+                                                            setEditingTicket(existingTicket);
+                                                            setAgentView('history');
+                                                        }}
+                                                        type="button"
+                                                        style={{flex: 1}}
+                                                    >
+                                                        View Existing Ticket
+                                                    </button>
+                                                    <button 
+                                                        className="btn btn-secondary"
+                                                        onClick={() => setExistingTicket(null)}
+                                                        type="button"
+                                                        style={{flex: 1}}
+                                                    >
+                                                        Create New Ticket Anyway
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                         
                                         <div className="form-group">
                                             <label>Reason for Calling *</label>
@@ -1672,9 +1969,111 @@
                         <div className="container">
                             {/* Ticket History View */}
                             <div className="card">
-                                <h2 style={{marginBottom: '1.5rem'}}>My Ticket History</h2>
+                                <h2 style={{marginBottom: '1.5rem'}}>Ticket History</h2>
                                 
-                                {agentTickets.length === 0 ? (
+                                {/* Search Bar - Most Important, At The Top */}
+                                <div style={{marginBottom: '1.5rem'}}>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="🔍 Quick Search: Type order number, phone number, or customer name..."
+                                        value={agentSearchOrder}
+                                        onChange={(e) => setAgentSearchOrder(e.target.value)}
+                                        style={{
+                                            fontSize: '1.1rem',
+                                            padding: '1rem',
+                                            background: 'rgba(59, 130, 246, 0.1)',
+                                            border: '2px solid rgba(59, 130, 246, 0.3)',
+                                            borderRadius: '8px'
+                                        }}
+                                        autoFocus
+                                    />
+                                    {agentSearchOrder && (
+                                        <p style={{fontSize: '0.875rem', color: '#60a5fa', marginTop: '0.5rem'}}>
+                                            💡 Searching across all tickets (ignores filters)
+                                        </p>
+                                    )}
+                                </div>
+                                
+                                {/* Filter Section - Organized in a single row */}
+                                <div style={{
+                                    display: 'flex', 
+                                    gap: '1rem', 
+                                    marginBottom: '1.5rem',
+                                    flexWrap: 'wrap',
+                                    alignItems: 'center',
+                                    padding: '1rem',
+                                    background: 'rgba(15, 23, 42, 0.4)',
+                                    borderRadius: '8px'
+                                }}>
+                                    {/* View Toggle */}
+                                    <div style={{display: 'flex', gap: '0.5rem'}}>
+                                        <button 
+                                            className={`btn btn-sm ${!showAllTickets ? 'btn-primary' : 'btn-secondary'}`}
+                                            onClick={() => setShowAllTickets(false)}
+                                            style={{fontSize: '0.875rem'}}
+                                        >
+                                            My Tickets ({agentTickets.length})
+                                        </button>
+                                        <button 
+                                            className={`btn btn-sm ${showAllTickets ? 'btn-primary' : 'btn-secondary'}`}
+                                            onClick={() => setShowAllTickets(true)}
+                                            style={{fontSize: '0.875rem'}}
+                                        >
+                                            All Company ({allTickets.length})
+                                        </button>
+                                    </div>
+                                    
+                                    <div style={{width: '1px', height: '30px', background: 'rgba(71, 85, 105, 0.5)'}}></div>
+                                    
+                                    {/* Status Filters */}
+                                    <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+                                        <button 
+                                            className={`filter-btn ${agentStatusFilter === 'escalated' ? 'active' : ''}`}
+                                            onClick={() => setAgentStatusFilter('escalated')}
+                                        >
+                                            Escalated ({(showAllTickets ? allTickets : agentTickets).filter(t => t.status === 'escalated').length})
+                                        </button>
+                                        <button 
+                                            className={`filter-btn ${agentStatusFilter === 'pending' ? 'active' : ''}`}
+                                            onClick={() => setAgentStatusFilter('pending')}
+                                        >
+                                            Pending ({(showAllTickets ? allTickets : agentTickets).filter(t => t.status === 'pending').length})
+                                        </button>
+                                        <button 
+                                            className={`filter-btn ${agentStatusFilter === 'resolved' ? 'active' : ''}`}
+                                            onClick={() => setAgentStatusFilter('resolved')}
+                                        >
+                                            Resolved ({(showAllTickets ? allTickets : agentTickets).filter(t => t.status === 'resolved').length})
+                                        </button>
+                                        <button 
+                                            className={`filter-btn ${agentStatusFilter === 'all' ? 'active' : ''}`}
+                                            onClick={() => setAgentStatusFilter('all')}
+                                        >
+                                            All
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                {(() => {
+                                    // Apply filters
+                                    let filteredTickets = showAllTickets ? allTickets : agentTickets;
+                                    
+                                    // If there's a search query, search across multiple fields and IGNORE status filter
+                                    if (agentSearchOrder.trim()) {
+                                        const query = agentSearchOrder.toLowerCase();
+                                        filteredTickets = filteredTickets.filter(t => 
+                                            (t.orderNumber && t.orderNumber.toLowerCase().includes(query)) ||
+                                            (t.phoneNumber && t.phoneNumber.includes(query))
+                                        );
+                                    } else {
+                                        // Only apply status filter if there's NO search query
+                                        if (agentStatusFilter !== 'all') {
+                                            filteredTickets = filteredTickets.filter(t => t.status === agentStatusFilter);
+                                        }
+                                    }
+                                    
+                                    return filteredTickets.length === 0 ? (
                                     <div style={{textAlign: 'center', padding: '3rem', color: '#94a3b8'}}>
                                         <svg style={{width: '64px', height: '64px', margin: '0 auto 1rem', opacity: 0.5}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -1689,12 +2088,13 @@
                                                 <th>Order #</th>
                                                 <th>Phone</th>
                                                 <th>Country</th>
+                                                {showAllTickets && <th>Agent</th>}
                                                 <th>Status</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {agentTickets.map(ticket => (
+                                            {filteredTickets.map(ticket => (
                                                 <tr key={ticket.id}>
                                                     <td>
                                                         {ticket.timestamp ? new Date(ticket.timestamp).toLocaleString('en-US', {
@@ -1707,6 +2107,7 @@
                                                     <td style={{fontWeight: 600}}>{ticket.orderNumber}</td>
                                                     <td>{ticket.phoneNumber}</td>
                                                     <td>{ticket.country}</td>
+                                                    {showAllTickets && <td>{ticket.agentUsername || 'N/A'}</td>}
                                                     <td>
                                                         {ticket.status === 'escalated' && <span className="badge badge-escalated">Escalated</span>}
                                                         {ticket.status === 'resolved' && <span className="badge badge-resolved">Resolved</span>}
@@ -1724,7 +2125,8 @@
                                             ))}
                                         </tbody>
                                     </table>
-                                )}
+                                );
+                                })()}
                             </div>
                             
                             {/* Edit Ticket Modal */}
@@ -2030,15 +2432,24 @@
                                                         {ticket.status === 'pending' && <span className="badge badge-pending">Pending</span>}
                                                     </td>
                                                     <td>
-                                                        <button
-                                                            className="btn btn-primary btn-sm"
-                                                            onClick={() => {
-                                                                setSelectedTicket(ticket);
-                                                                setManagerResolutionNotes('');
-                                                            }}
-                                                        >
-                                                            View Details
-                                                        </button>
+                                                        <div style={{display: 'flex', gap: '0.5rem'}}>
+                                                            <button
+                                                                className="btn btn-primary btn-sm"
+                                                                onClick={() => {
+                                                                    setSelectedTicket(ticket);
+                                                                    setManagerResolutionNotes('');
+                                                                }}
+                                                            >
+                                                                View Details
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-danger btn-sm"
+                                                                onClick={() => deleteTicket(ticket.id)}
+                                                                title="Delete ticket permanently"
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -2080,12 +2491,23 @@
                                         alignItems: 'center'
                                     }}>
                                         <h2 style={{fontSize: '1.5rem'}}>Ticket Details</h2>
-                                        <button
-                                            onClick={() => setSelectedTicket(null)}
-                                            className="btn btn-secondary btn-sm"
-                                        >
-                                            Close
-                                        </button>
+                                        <div style={{display: 'flex', gap: '0.5rem'}}>
+                                            <button
+                                                onClick={() => {
+                                                    deleteTicket(selectedTicket.id);
+                                                }}
+                                                className="btn btn-danger btn-sm"
+                                                title="Delete this ticket"
+                                            >
+                                                🗑️ Delete
+                                            </button>
+                                            <button
+                                                onClick={() => setSelectedTicket(null)}
+                                                className="btn btn-secondary btn-sm"
+                                            >
+                                                Close
+                                            </button>
+                                        </div>
                                     </div>
                                     
                                     <div style={{padding: '2rem'}}>
