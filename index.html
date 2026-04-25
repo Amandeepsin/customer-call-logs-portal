@@ -547,6 +547,8 @@
             const [managerTab, setManagerTab] = useState('escalated');
             const [selectedTicket, setSelectedTicket] = useState(null);
             const [managerResolutionNotes, setManagerResolutionNotes] = useState('');
+            const [managerPendingNotes, setManagerPendingNotes] = useState('');
+            const [showPendingInput, setShowPendingInput] = useState(false);
             
             useEffect(() => {
                 if (view === 'manager') {
@@ -2362,374 +2364,299 @@
                                 </div>
                             </div>
                             
-                            {/* Tickets Table */}
-                            <div className="card">
-                                {displayTickets.length === 0 ? (
-                                    <div style={{textAlign: 'center', padding: '3rem', color: '#94a3b8'}}>
-                                        <svg style={{width: '64px', height: '64px', margin: '0 auto 1rem', opacity: 0.5}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                        </svg>
-                                        <p>No tickets to display</p>
+                            {/* Split Pane */}
+                            <div style={{
+                                display: 'flex',
+                                gap: '0',
+                                border: '1px solid rgba(71,85,105,0.5)',
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                height: '620px',
+                                background: 'rgba(15,23,42,0.6)'
+                            }}>
+                                {/* LEFT: Ticket List */}
+                                <div style={{
+                                    width: '320px',
+                                    flexShrink: 0,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    borderRight: '1px solid rgba(71,85,105,0.4)',
+                                    background: 'rgba(15,23,42,0.8)'
+                                }}>
+                                    <div style={{padding: '0.5rem 0.75rem', borderBottom: '1px solid rgba(71,85,105,0.3)', fontSize: '0.75rem', color: '#64748b'}}>
+                                        {displayTickets.length} ticket{displayTickets.length !== 1 ? 's' : ''}
                                     </div>
-                                ) : (
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Date/Time</th>
-                                                <th>Agent</th>
-                                                <th>Phone</th>
-                                                <th>Country</th>
-                                                <th>Order #</th>
-                                                <th>Type</th>
-                                                <th>Issue</th>
-                                                <th>Status</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {displayTickets.map(ticket => (
-                                                <tr key={ticket.id}>
-                                                    <td>
-                                                        {ticket.timestamp ? new Date(ticket.timestamp).toLocaleString('en-US', {
-                                                            month: 'short',
-                                                            day: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        }) : 'N/A'}
-                                                    </td>
-                                                    <td>
-                                                        <span style={{
-                                                            padding: '0.25rem 0.5rem',
-                                                            background: 'rgba(59, 130, 246, 0.1)',
-                                                            borderRadius: '4px',
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: 600,
-                                                            color: '#60a5fa'
-                                                        }}>
-                                                            {ticket.agentUsername || 'Unknown'}
-                                                        </span>
-                                                    </td>
-                                                    <td>{ticket.phoneNumber}</td>
-                                                    <td>{ticket.country}</td>
-                                                    <td style={{fontWeight: 600}}>{ticket.orderNumber}</td>
-                                                    <td>
-                                                        {ticket.orderPlaced ? (
-                                                            <span style={{color: '#60a5fa'}}>Order Issue</span>
-                                                        ) : (
-                                                            <span style={{color: '#94a3b8'}}>General Inquiry</span>
-                                                        )}
-                                                    </td>
-                                                    <td style={{fontSize: '0.8rem'}}>
+                                    {displayTickets.length === 0 ? (
+                                        <div style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'#475569', fontSize:'0.8rem', gap:'0.5rem'}}>
+                                            <svg style={{width:'40px',height:'40px',opacity:0.4}} fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M7 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2h-2M9 4a2 2 0 002 2h2a2 2 0 002-2M9 4a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                            <span>No tickets to display</span>
+                                        </div>
+                                    ) : (
+                                        <div style={{flex:1, overflowY:'auto'}}>
+                                            {displayTickets.map((ticket, idx) => (
+                                                <div
+                                                    key={ticket.id}
+                                                    onClick={() => { setSelectedTicket(ticket); setManagerResolutionNotes(''); setManagerPendingNotes(''); setShowPendingInput(false); }}
+                                                    style={{
+                                                        padding: '0.75rem 1rem',
+                                                        borderBottom: '1px solid rgba(71,85,105,0.2)',
+                                                        cursor: 'pointer',
+                                                        borderLeft: selectedTicket && selectedTicket.id === ticket.id ? '3px solid #3b82f6' : '3px solid transparent',
+                                                        background: selectedTicket && selectedTicket.id === ticket.id ? 'rgba(37,99,235,0.12)' : 'transparent',
+                                                        transition: 'background 0.1s'
+                                                    }}
+                                                >
+                                                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'3px'}}>
+                                                        <div style={{display:'flex', alignItems:'center', gap:'5px'}}>
+                                                            <span style={{fontSize:'0.8rem', fontWeight:600, color:'#e2e8f0'}}>
+                                                                #{ticket.orderNumber || 'N/A'}
+                                                            </span>
+                                                            {ticket.orderNumber && ticket.orderNumber !== 'N/A' && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        navigator.clipboard.writeText(ticket.orderNumber);
+                                                                        const btn = e.currentTarget;
+                                                                        btn.textContent = '✓'; btn.style.color = '#6ee7b7';
+                                                                        setTimeout(() => { btn.textContent = '⎘'; btn.style.color = '#64748b'; }, 1500);
+                                                                    }}
+                                                                    title="Copy order number"
+                                                                    style={{padding:'1px 5px',borderRadius:'4px',border:'1px solid rgba(71,85,105,0.35)',background:'transparent',color:'#64748b',fontSize:'0.65rem',cursor:'pointer',lineHeight:1.4}}
+                                                                >⎘</button>
+                                                            )}
+                                                        </div>
+                                                        {ticket.status === 'escalated' && <span className="badge badge-escalated">Escalated</span>}
+                                                        {ticket.status === 'resolved' && <span className="badge badge-resolved">Resolved</span>}
+                                                        {ticket.status === 'pending' && <span className="badge badge-pending">Pending</span>}
+                                                    </div>
+                                                    <div style={{fontSize:'0.7rem', color:'#64748b', marginBottom:'3px'}}>
+                                                        {ticket.agentUsername || 'Unknown'} · {ticket.timestamp ? new Date(ticket.timestamp).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : 'N/A'} · {ticket.country}
+                                                    </div>
+                                                    <div style={{fontSize:'0.7rem', color:'#94a3b8', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>
                                                         {ticket.reasonForCall === 'add_remove' && 'Add/Remove Items'}
                                                         {ticket.reasonForCall === 'change_details' && 'Change Details'}
                                                         {ticket.reasonForCall === 'tracking' && 'Order Tracking'}
                                                         {ticket.reasonForCall === 'problem_delivered' && 'Delivered Problem'}
                                                         {ticket.generalQuery && 'General Inquiry'}
-                                                    </td>
-                                                    <td>
-                                                        {ticket.status === 'escalated' && <span className="badge badge-escalated">Escalated</span>}
-                                                        {ticket.status === 'resolved' && <span className="badge badge-resolved">Resolved</span>}
-                                                        {ticket.status === 'pending' && <span className="badge badge-pending">Pending</span>}
-                                                    </td>
-                                                    <td>
-                                                        <div style={{display: 'flex', gap: '0.5rem'}}>
-                                                            <button
-                                                                className="btn btn-primary btn-sm"
-                                                                onClick={() => {
-                                                                    setSelectedTicket(ticket);
-                                                                    setManagerResolutionNotes('');
-                                                                }}
-                                                            >
-                                                                View Details
-                                                            </button>
-                                                            <button
-                                                                className="btn btn-danger btn-sm"
-                                                                onClick={() => deleteTicket(ticket.id)}
-                                                                title="Delete ticket permanently"
-                                                            >
-                                                                🗑️
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
+                                                        {ticket.resolution ? ' — ' + ticket.resolution.substring(0,45) + (ticket.resolution.length > 45 ? '…' : '') : ''}
+                                                    </div>
+                                                </div>
                                             ))}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
-                        </div>
-                        
-                        {/* Ticket Detail Modal */}
-                        {selectedTicket && (
-                            <div style={{
-                                position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                background: 'rgba(0,0,0,0.8)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 1000,
-                                padding: '2rem'
-                            }}>
-                                <div style={{
-                                    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                                    borderRadius: '12px',
-                                    maxWidth: '800px',
-                                    width: '100%',
-                                    maxHeight: '90vh',
-                                    overflow: 'auto',
-                                    border: '1px solid rgba(71, 85, 105, 0.5)'
-                                }}>
-                                    <div style={{
-                                        padding: '2rem',
-                                        borderBottom: '1px solid rgba(71, 85, 105, 0.5)',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}>
-                                        <h2 style={{fontSize: '1.5rem'}}>Ticket Details</h2>
-                                        <div style={{display: 'flex', gap: '0.5rem'}}>
-                                            <button
-                                                onClick={() => {
-                                                    deleteTicket(selectedTicket.id);
-                                                }}
-                                                className="btn btn-danger btn-sm"
-                                                title="Delete this ticket"
-                                            >
-                                                🗑️ Delete
-                                            </button>
-                                            <button
-                                                onClick={() => setSelectedTicket(null)}
-                                                className="btn btn-secondary btn-sm"
-                                            >
-                                                Close
-                                            </button>
                                         </div>
-                                    </div>
-                                    
-                                    <div style={{padding: '2rem'}}>
-                                        <div className="ticket-detail">
-                                            <div className="ticket-detail-row">
-                                                <span className="ticket-detail-label">Date/Time:</span>
-                                                <span className="ticket-detail-value">
-                                                    {selectedTicket.timestamp ? new Date(selectedTicket.timestamp).toLocaleString() : 'N/A'}
-                                                </span>
-                                            </div>
-                                            <div className="ticket-detail-row">
-                                                <span className="ticket-detail-label">Agent:</span>
-                                                <span className="ticket-detail-value">
-                                                    <span style={{
-                                                        padding: '0.25rem 0.75rem',
-                                                        background: 'rgba(59, 130, 246, 0.15)',
-                                                        borderRadius: '6px',
-                                                        fontSize: '0.875rem',
-                                                        fontWeight: 600,
-                                                        color: '#60a5fa'
-                                                    }}>
-                                                        👤 {selectedTicket.agentUsername || 'Unknown'}
-                                                    </span>
-                                                </span>
-                                            </div>
-                                            <div className="ticket-detail-row">
-                                                <span className="ticket-detail-label">Phone:</span>
-                                                <span className="ticket-detail-value">{selectedTicket.phoneNumber}</span>
-                                            </div>
-                                            <div className="ticket-detail-row">
-                                                <span className="ticket-detail-label">Country:</span>
-                                                <span className="ticket-detail-value">{selectedTicket.country}</span>
-                                            </div>
-                                            <div className="ticket-detail-row">
-                                                <span className="ticket-detail-label">Order Number:</span>
-                                                <span className="ticket-detail-value">{selectedTicket.orderNumber}</span>
-                                            </div>
-                                            <div className="ticket-detail-row">
-                                                <span className="ticket-detail-label">Type:</span>
-                                                <span className="ticket-detail-value">
-                                                    {selectedTicket.orderPlaced ? 'Order Issue' : 'General Inquiry'}
-                                                </span>
-                                            </div>
-                                            <div className="ticket-detail-row">
-                                                <span className="ticket-detail-label">Status:</span>
-                                                <span className="ticket-detail-value">
-                                                    {selectedTicket.status === 'escalated' && <span className="badge badge-escalated">Escalated</span>}
-                                                    {selectedTicket.status === 'resolved' && <span className="badge badge-resolved">Resolved</span>}
-                                                    {selectedTicket.status === 'pending' && <span className="badge badge-pending">Pending</span>}
-                                                </span>
-                                            </div>
+                                    )}
+                                </div>
+
+                                {/* RIGHT: Ticket Detail */}
+                                <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden'}}>
+                                    {!selectedTicket ? (
+                                        <div style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'#475569', fontSize:'0.85rem', gap:'0.75rem'}}>
+                                            <svg style={{width:'48px',height:'48px',opacity:0.3}} fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/></svg>
+                                            <span>Select a ticket from the list to view details</span>
                                         </div>
-                                        
-                                        <div style={{marginTop: '1.5rem'}}>
-                                            <h3 style={{marginBottom: '1rem', fontSize: '1.125rem'}}>Conversation Summary</h3>
-                                            <div className="ticket-detail">
-                                                <p style={{color: '#cbd5e1', lineHeight: 1.6, whiteSpace: 'pre-wrap'}}>
-                                                    {selectedTicket.agentNotes || 'No conversation summary provided'}
-                                                </p>
+                                    ) : (
+                                        <>
+                                            {/* Detail Header */}
+                                            <div style={{
+                                                padding: '0.875rem 1.25rem',
+                                                borderBottom: '1px solid rgba(71,85,105,0.4)',
+                                                background: 'rgba(30,41,59,0.7)',
+                                                flexShrink: 0
+                                            }}>
+                                                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'4px'}}>
+                                                    <div style={{display:'flex', alignItems:'center', gap:'0.75rem'}}>
+                                                        <span style={{fontSize:'1rem', fontWeight:700, color:'#fff'}}>
+                                                            Order #{selectedTicket.orderNumber || 'N/A'}
+                                                        </span>
+                                                        {selectedTicket.orderNumber && selectedTicket.orderNumber !== 'N/A' && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(selectedTicket.orderNumber);
+                                                                    const btn = document.getElementById('copy-order-btn');
+                                                                    if (btn) { btn.textContent = '✓ Copied'; btn.style.color = '#6ee7b7'; btn.style.borderColor = 'rgba(16,185,129,0.4)'; setTimeout(() => { btn.textContent = 'Copy'; btn.style.color = '#94a3b8'; btn.style.borderColor = 'rgba(71,85,105,0.4)'; }, 1500); }
+                                                                }}
+                                                                id="copy-order-btn"
+                                                                style={{padding:'2px 8px',borderRadius:'5px',border:'1px solid rgba(71,85,105,0.4)',background:'transparent',color:'#94a3b8',fontSize:'0.7rem',cursor:'pointer'}}
+                                                            >Copy</button>
+                                                        )}
+                                                        {selectedTicket.status === 'escalated' && <span className="badge badge-escalated">Escalated</span>}
+                                                        {selectedTicket.status === 'resolved' && <span className="badge badge-resolved">Resolved</span>}
+                                                        {selectedTicket.status === 'pending' && <span className="badge badge-pending">Pending</span>}
+                                                    </div>
+                                                    <div style={{display:'flex', gap:'0.4rem', alignItems:'center'}}>
+                                                        {/* Up/Down navigation */}
+                                                        {(() => {
+                                                            const idx = displayTickets.findIndex(t => t.id === selectedTicket.id);
+                                                            return (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => { if(idx > 0){ setSelectedTicket(displayTickets[idx-1]); setManagerResolutionNotes(''); setManagerPendingNotes(''); setShowPendingInput(false); } }}
+                                                                        disabled={idx <= 0}
+                                                                        title="Previous ticket"
+                                                                        style={{width:'28px',height:'28px',borderRadius:'6px',border:'1px solid rgba(71,85,105,0.5)',background:'rgba(71,85,105,0.3)',color:'#cbd5e1',fontSize:'13px',cursor:idx>0?'pointer':'default',opacity:idx>0?1:0.3,display:'flex',alignItems:'center',justifyContent:'center'}}
+                                                                    >↑</button>
+                                                                    <button
+                                                                        onClick={() => { if(idx < displayTickets.length-1){ setSelectedTicket(displayTickets[idx+1]); setManagerResolutionNotes(''); setManagerPendingNotes(''); setShowPendingInput(false); } }}
+                                                                        disabled={idx >= displayTickets.length-1}
+                                                                        title="Next ticket"
+                                                                        style={{width:'28px',height:'28px',borderRadius:'6px',border:'1px solid rgba(71,85,105,0.5)',background:'rgba(71,85,105,0.3)',color:'#cbd5e1',fontSize:'13px',cursor:idx<displayTickets.length-1?'pointer':'default',opacity:idx<displayTickets.length-1?1:0.3,display:'flex',alignItems:'center',justifyContent:'center'}}
+                                                                    >↓</button>
+                                                                    <span style={{fontSize:'0.7rem',color:'#64748b',marginLeft:'2px'}}>{idx+1}/{displayTickets.length}</span>
+                                                                </>
+                                                            );
+                                                        })()}
+                                                        <button
+                                                            onClick={() => deleteTicket(selectedTicket.id)}
+                                                            style={{padding:'4px 10px',borderRadius:'6px',border:'1px solid rgba(239,68,68,0.4)',background:'rgba(239,68,68,0.12)',color:'#fca5a5',fontSize:'0.7rem',cursor:'pointer',marginLeft:'4px'}}
+                                                        >🗑️ Delete</button>
+                                                    </div>
+                                                </div>
+                                                <div style={{display:'flex', gap:'1rem', flexWrap:'wrap', fontSize:'0.75rem', color:'#94a3b8'}}>
+                                                    <span>Agent: <span style={{color:'#60a5fa',fontWeight:600}}>{selectedTicket.agentUsername || 'Unknown'}</span></span>
+                                                    {selectedTicket.phoneNumber && <span>{selectedTicket.phoneNumber}</span>}
+                                                    <span>{selectedTicket.country}</span>
+                                                    <span>{selectedTicket.timestamp ? new Date(selectedTicket.timestamp).toLocaleString() : 'N/A'}</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                        
-                                        <div style={{marginTop: '1.5rem'}}>
-                                            <h3 style={{marginBottom: '1rem', fontSize: '1.125rem'}}>Resolution Details</h3>
-                                            <div className="ticket-detail">
-                                                <p style={{color: '#cbd5e1', lineHeight: 1.6}}>
-                                                    {selectedTicket.resolution || 'No resolution details available'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        
-                                        {selectedTicket.refundAmount && (
-                                            <div className="alert alert-warning" style={{marginTop: '1.5rem'}}>
-                                                <strong>Refund Amount:</strong> ${selectedTicket.refundAmount.toFixed(2)}
-                                            </div>
-                                        )}
-                                        
-                                        {/* Manager Actions */}
-                                        {selectedTicket.status === 'escalated' && (
-                                            <div style={{marginTop: '2rem'}}>
-                                                <h3 style={{marginBottom: '1rem', fontSize: '1.125rem'}}>Manager Actions</h3>
-                                                
-                                                {/* Resolution Details Text Area */}
-                                                <div className="form-group" style={{marginBottom: '1.5rem'}}>
-                                                    <label style={{fontWeight: 600, marginBottom: '0.5rem', display: 'block'}}>
-                                                        Resolution Details *
-                                                    </label>
-                                                    <textarea
-                                                        className="form-control"
-                                                        value={managerResolutionNotes}
-                                                        onChange={(e) => setManagerResolutionNotes(e.target.value)}
-                                                        placeholder="Describe how you resolved this ticket (required before marking as resolved)..."
-                                                        rows="4"
-                                                        style={{
-                                                            width: '100%',
-                                                            minHeight: '100px',
-                                                            resize: 'vertical'
-                                                        }}
-                                                    />
-                                                    <p style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem'}}>
-                                                        Required to mark ticket as resolved
+
+                                            {/* Detail Body */}
+                                            <div style={{flex:1, overflowY:'auto', padding:'1rem 1.25rem', display:'flex', flexDirection:'column', gap:'0.875rem'}}>
+                                                {/* Info grid */}
+                                                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.5rem'}}>
+                                                    {[
+                                                        {label:'Issue type', value: selectedTicket.reasonForCall === 'add_remove' ? 'Add/Remove Items' : selectedTicket.reasonForCall === 'change_details' ? 'Change Details' : selectedTicket.reasonForCall === 'tracking' ? 'Order Tracking' : selectedTicket.reasonForCall === 'problem_delivered' ? 'Delivered Problem' : selectedTicket.generalQuery ? 'General Inquiry' : '—'},
+                                                        {label:'Ticket type', value: selectedTicket.orderPlaced ? 'Order Issue' : 'General Inquiry'},
+                                                        {label:'Phone', value: selectedTicket.phoneNumber || '—'},
+                                                        {label:'Country', value: selectedTicket.country || '—'},
+                                                    ].map(item => (
+                                                        <div key={item.label} style={{background:'rgba(30,41,59,0.7)',border:'1px solid rgba(71,85,105,0.3)',borderRadius:'8px',padding:'0.5rem 0.75rem'}}>
+                                                            <div style={{fontSize:'0.65rem',color:'#64748b',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'3px'}}>{item.label}</div>
+                                                            <div style={{fontSize:'0.8rem',color:'#e2e8f0',fontWeight:500}}>{item.value}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* Agent summary */}
+                                                <div style={{background:'rgba(30,41,59,0.5)',border:'1px solid rgba(71,85,105,0.3)',borderRadius:'8px',padding:'0.75rem'}}>
+                                                    <div style={{fontSize:'0.65rem',color:'#64748b',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'6px',fontWeight:600}}>Agent conversation summary</div>
+                                                    <p style={{fontSize:'0.8rem',color:'#cbd5e1',lineHeight:1.6,whiteSpace:'pre-wrap'}}>
+                                                        {selectedTicket.agentNotes || 'No summary provided'}
                                                     </p>
                                                 </div>
-                                                
-                                                <div style={{display: 'flex', gap: '1rem', flexWrap: 'wrap'}}>
-                                                    <button
-                                                        className="btn btn-success"
-                                                        onClick={() => {
-                                                            if (!managerResolutionNotes.trim()) {
-                                                                alert('⚠️ Please enter resolution details before marking as resolved');
-                                                                return;
-                                                            }
-                                                            updateTicketStatus(selectedTicket.id, 'resolved', managerResolutionNotes);
-                                                            setManagerResolutionNotes('');
-                                                        }}
-                                                        style={{flex: 1, minWidth: '200px'}}
-                                                    >
-                                                        ✓ Mark as Resolved
-                                                    </button>
-                                                    <button
-                                                        className="btn"
-                                                        onClick={() => {
-                                                            const notes = prompt('Add notes about why this is pending (optional):');
-                                                            updateTicketStatus(selectedTicket.id, 'pending', notes || '');
-                                                            setManagerResolutionNotes('');
-                                                        }}
-                                                        style={{
-                                                            flex: 1,
-                                                            minWidth: '200px',
-                                                            background: 'linear-gradient(to right, #f59e0b, #d97706)',
-                                                            color: 'white'
-                                                        }}
-                                                    >
-                                                        ⏳ Mark as Pending
-                                                    </button>
-                                                </div>
-                                                <p style={{marginTop: '0.75rem', fontSize: '0.875rem', color: '#94a3b8'}}>
-                                                    💡 Mark as Pending if waiting for customer response, additional info, or follow-up
-                                                </p>
-                                            </div>
-                                        )}
-                                        
-                                        {selectedTicket.status === 'pending' && (
-                                            <div style={{marginTop: '2rem'}}>
-                                                <h3 style={{marginBottom: '1rem', fontSize: '1.125rem'}}>Manager Actions</h3>
-                                                
-                                                {/* Resolution Details Text Area */}
-                                                <div className="form-group" style={{marginBottom: '1.5rem'}}>
-                                                    <label style={{fontWeight: 600, marginBottom: '0.5rem', display: 'block'}}>
-                                                        Resolution Details *
-                                                    </label>
-                                                    <textarea
-                                                        className="form-control"
-                                                        value={managerResolutionNotes}
-                                                        onChange={(e) => setManagerResolutionNotes(e.target.value)}
-                                                        placeholder="Describe how you resolved this ticket (required before marking as resolved)..."
-                                                        rows="4"
-                                                        style={{
-                                                            width: '100%',
-                                                            minHeight: '100px',
-                                                            resize: 'vertical'
-                                                        }}
-                                                    />
-                                                    <p style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem'}}>
-                                                        Required to mark ticket as resolved
+
+                                                {/* Agent resolution attempt */}
+                                                <div style={{background:'rgba(245,158,11,0.07)',border:'1px solid rgba(245,158,11,0.25)',borderRadius:'8px',padding:'0.75rem'}}>
+                                                    <div style={{fontSize:'0.65rem',color:'#92400e',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'6px',fontWeight:600}}>Agent resolution attempt</div>
+                                                    <p style={{fontSize:'0.8rem',color:'#fcd34d',lineHeight:1.6}}>
+                                                        {selectedTicket.resolution || 'No resolution details'}
                                                     </p>
+                                                    {selectedTicket.refundAmount && (
+                                                        <p style={{fontSize:'0.8rem',color:'#fbbf24',marginTop:'4px',fontWeight:600}}>
+                                                            Refund amount: {(CURRENCY_MAP[selectedTicket.country] || CURRENCY_MAP['Other']).symbol}{parseFloat(selectedTicket.refundAmount).toFixed(2)}
+                                                        </p>
+                                                    )}
                                                 </div>
-                                                
-                                                <div style={{display: 'flex', gap: '1rem', flexWrap: 'wrap'}}>
-                                                    <button
-                                                        className="btn btn-success"
-                                                        onClick={() => {
-                                                            if (!managerResolutionNotes.trim()) {
-                                                                alert('⚠️ Please enter resolution details before marking as resolved');
-                                                                return;
-                                                            }
-                                                            updateTicketStatus(selectedTicket.id, 'resolved', managerResolutionNotes);
-                                                            setManagerResolutionNotes('');
-                                                        }}
-                                                        style={{flex: 1, minWidth: '200px'}}
-                                                    >
-                                                        ✓ Mark as Resolved
-                                                    </button>
-                                                    <button
-                                                        className="btn"
-                                                        onClick={() => {
-                                                            const notes = prompt('Add notes (optional):');
-                                                            updateTicketStatus(selectedTicket.id, 'escalated', notes || '');
-                                                            setManagerResolutionNotes('');
-                                                        }}
-                                                        style={{
-                                                            flex: 1,
-                                                            minWidth: '200px',
-                                                            background: 'linear-gradient(to right, #ef4444, #dc2626)',
-                                                            color: 'white'
-                                                        }}
-                                                    >
-                                                        ⚠️ Re-escalate
-                                                    </button>
-                                                </div>
-                                                <p style={{marginTop: '0.75rem', fontSize: '0.875rem', color: '#94a3b8'}}>
-                                                    💡 Resolve when complete, or re-escalate if needs immediate attention
-                                                </p>
-                                            </div>
-                                        )}
-                                        
-                                        {selectedTicket.status === 'resolved' && (
-                                            <div style={{marginTop: '2rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px'}}>
-                                                <p style={{color: '#10b981', fontSize: '0.875rem', marginBottom: '0.5rem'}}>
-                                                    ✓ This ticket has been resolved
-                                                </p>
-                                                {selectedTicket.managerNotes && (
-                                                    <p style={{color: '#cbd5e1', fontSize: '0.875rem'}}>
-                                                        Manager Notes: {selectedTicket.managerNotes}
-                                                    </p>
+
+                                                {/* Pending notes display — visible to all managers */}
+                                                {selectedTicket.status === 'pending' && selectedTicket.managerNotes && (
+                                                    <div style={{background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.35)',borderRadius:'8px',padding:'0.75rem'}}>
+                                                        <div style={{fontSize:'0.65rem',color:'#92400e',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'5px',fontWeight:600}}>⏳ Pending reason — set by manager</div>
+                                                        <p style={{fontSize:'0.8rem',color:'#fcd34d',lineHeight:1.6}}>{selectedTicket.managerNotes}</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Manager Actions */}
+                                                {(selectedTicket.status === 'escalated' || selectedTicket.status === 'pending') && (
+                                                    <div style={{background:'rgba(30,41,59,0.8)',border:'1px solid rgba(71,85,105,0.5)',borderRadius:'8px',padding:'0.875rem'}}>
+                                                        <div style={{fontSize:'0.75rem',fontWeight:600,color:'#e2e8f0',marginBottom:'0.5rem'}}>Manager resolution notes</div>
+                                                        <textarea
+                                                            className="form-control"
+                                                            value={managerResolutionNotes}
+                                                            onChange={(e) => setManagerResolutionNotes(e.target.value)}
+                                                            placeholder="Describe the action taken or resolution…"
+                                                            rows="3"
+                                                            style={{width:'100%',minHeight:'70px',resize:'vertical',fontSize:'0.8rem',padding:'0.5rem 0.75rem'}}
+                                                        />
+                                                        <p style={{fontSize:'0.7rem',color:'#64748b',margin:'4px 0 10px'}}>Required to mark as resolved</p>
+
+                                                        {/* Inline pending reason input — expands when Mark Pending clicked */}
+                                                        {showPendingInput && (
+                                                            <div style={{marginBottom:'0.75rem',padding:'0.75rem',background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.3)',borderRadius:'8px'}}>
+                                                                <div style={{fontSize:'0.7rem',color:'#f59e0b',fontWeight:600,marginBottom:'6px'}}>Why is this being marked pending?</div>
+                                                                <textarea
+                                                                    className="form-control"
+                                                                    value={managerPendingNotes}
+                                                                    onChange={(e) => setManagerPendingNotes(e.target.value)}
+                                                                    placeholder="e.g. Waiting for customer to send tracking screenshot, following up with courier…"
+                                                                    rows="2"
+                                                                    autoFocus
+                                                                    style={{width:'100%',minHeight:'56px',resize:'vertical',fontSize:'0.8rem',padding:'0.5rem 0.75rem',marginBottom:'0.5rem'}}
+                                                                />
+                                                                <div style={{display:'flex',gap:'0.5rem'}}>
+                                                                    <button
+                                                                        className="btn btn-warning"
+                                                                        style={{flex:1,padding:'0.4rem',fontSize:'0.75rem'}}
+                                                                        onClick={() => {
+                                                                            updateTicketStatus(selectedTicket.id, 'pending', managerPendingNotes);
+                                                                            setManagerResolutionNotes('');
+                                                                            setManagerPendingNotes('');
+                                                                            setShowPendingInput(false);
+                                                                        }}
+                                                                    >⏳ Confirm — mark pending</button>
+                                                                    <button
+                                                                        className="btn btn-secondary"
+                                                                        style={{padding:'0.4rem 0.75rem',fontSize:'0.75rem'}}
+                                                                        onClick={() => { setShowPendingInput(false); setManagerPendingNotes(''); }}
+                                                                    >Cancel</button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        <div style={{display:'flex',gap:'0.5rem'}}>
+                                                            <button
+                                                                className="btn btn-success"
+                                                                style={{flex:1,padding:'0.5rem',fontSize:'0.8rem'}}
+                                                                onClick={() => {
+                                                                    if (!managerResolutionNotes.trim()) {
+                                                                        alert('⚠️ Please enter resolution details before marking as resolved');
+                                                                        return;
+                                                                    }
+                                                                    updateTicketStatus(selectedTicket.id, 'resolved', managerResolutionNotes);
+                                                                    setManagerResolutionNotes('');
+                                                                    setShowPendingInput(false);
+                                                                    setManagerPendingNotes('');
+                                                                }}
+                                                            >✓ Mark resolved</button>
+                                                            {selectedTicket.status === 'escalated' ? (
+                                                                <button
+                                                                    className="btn btn-warning"
+                                                                    style={{flex:1,padding:'0.5rem',fontSize:'0.8rem'}}
+                                                                    onClick={() => { setShowPendingInput(true); }}
+                                                                >⏳ Mark pending</button>
+                                                            ) : (
+                                                                <button
+                                                                    className="btn btn-danger"
+                                                                    style={{flex:1,padding:'0.5rem',fontSize:'0.8rem'}}
+                                                                    onClick={() => { setShowPendingInput(true); }}
+                                                                >⚠️ Re-escalate</button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {selectedTicket.status === 'resolved' && (
+                                                    <div style={{background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.3)',borderRadius:'8px',padding:'0.875rem'}}>
+                                                        <p style={{color:'#10b981',fontSize:'0.8rem',marginBottom: selectedTicket.managerNotes ? '0.5rem' : 0}}>✓ This ticket has been resolved</p>
+                                                        {selectedTicket.managerNotes && (
+                                                            <p style={{color:'#cbd5e1',fontSize:'0.8rem'}}>Manager notes: {selectedTicket.managerNotes}</p>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
-                                        )}
-                                    </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 );
             }
