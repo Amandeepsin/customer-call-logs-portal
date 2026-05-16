@@ -354,6 +354,39 @@
             max-width: 600px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
+        .toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+        .toast {
+            background: #1e293b;
+            border: 1px solid rgba(71, 85, 105, 0.6);
+            border-radius: 10px;
+            padding: 0.875rem 1.125rem;
+            min-width: 280px;
+            max-width: 420px;
+            color: #e2e8f0;
+            font-size: 0.875rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            animation: toast-in 0.25s ease-out;
+            pointer-events: auto;
+        }
+        .toast-success { border-left: 4px solid #10b981; }
+        .toast-error { border-left: 4px solid #ef4444; }
+        .toast-info { border-left: 4px solid #3b82f6; }
+        @keyframes toast-in {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
         .filter-buttons {
             display: flex;
             gap: 0.5rem;
@@ -549,6 +582,17 @@
             const [managerResolutionNotes, setManagerResolutionNotes] = useState('');
             const [managerPendingNotes, setManagerPendingNotes] = useState('');
             const [showPendingInput, setShowPendingInput] = useState(false);
+            const [deleteConfirmTicket, setDeleteConfirmTicket] = useState(null);
+            const [resolutionError, setResolutionError] = useState('');
+            const [toasts, setToasts] = useState([]);
+            
+            const showToast = (message, type = 'info') => {
+                const id = Date.now() + Math.random();
+                setToasts(prev => [...prev, {id, message, type}]);
+                setTimeout(() => {
+                    setToasts(prev => prev.filter(t => t.id !== id));
+                }, 3500);
+            };
             
             useEffect(() => {
                 if (view === 'manager') {
@@ -686,10 +730,6 @@
             };
             
             const deleteTicket = async (ticketId) => {
-                if (!window.confirm('⚠️ Are you sure you want to delete this ticket? This action cannot be undone.')) {
-                    return;
-                }
-                
                 try {
                     await db.collection('customerServiceTickets').doc(ticketId).delete();
                     
@@ -706,10 +746,11 @@
                         setEditingTicket(null);
                     }
                     
-                    alert('✅ Ticket deleted successfully');
+                    setDeleteConfirmTicket(null);
+                    showToast('Ticket deleted successfully', 'success');
                 } catch (error) {
                     console.error('Error deleting ticket:', error);
-                    alert('❌ Error deleting ticket: ' + error.message);
+                    showToast('Error deleting ticket: ' + error.message, 'error');
                 }
             };
             
@@ -2193,13 +2234,19 @@
                                                 className="btn btn-primary"
                                                 onClick={async () => {
                                                     try {
-                                                        await db.collection('customerServiceTickets').doc(editingTicket.id).update({
+                                                        const isReescalating = editingTicket.status === 'pending';
+                                                        const updatePayload = {
                                                             orderNumber: editingTicket.orderNumber,
                                                             phoneNumber: editingTicket.phoneNumber,
                                                             country: editingTicket.country,
                                                             agentNotes: editingTicket.agentNotes
-                                                        });
-                                                        alert('✅ Ticket updated successfully!');
+                                                        };
+                                                        if (isReescalating) {
+                                                            updatePayload.status = 'escalated';
+                                                            updatePayload.managerNotes = '';
+                                                        }
+                                                        await db.collection('customerServiceTickets').doc(editingTicket.id).update(updatePayload);
+                                                        alert(isReescalating ? '✅ Ticket updated and re-escalated to manager!' : '✅ Ticket updated successfully!');
                                                         loadAgentTickets();
                                                         setEditingTicket(null);
                                                     } catch (error) {
@@ -2209,7 +2256,7 @@
                                                 }}
                                                 style={{flex: 1}}
                                             >
-                                                Save Changes
+                                                {editingTicket.status === 'pending' ? 'Update & Re-escalate' : 'Save Changes'}
                                             </button>
                                             <button
                                                 className="btn btn-secondary"
@@ -2228,6 +2275,36 @@
                                                 <strong>Created:</strong> {editingTicket.timestamp ? new Date(editingTicket.timestamp).toLocaleString() : 'N/A'}
                                             </p>
                                         </div>
+                                        
+                                        {editingTicket.status === 'resolved' && editingTicket.managerNotes && (
+                                            <div style={{marginTop: '1rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px'}}>
+                                                <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem'}}>
+                                                    <span style={{fontSize: '0.7rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em'}}>✓ Manager Resolution Notes</span>
+                                                    <span style={{fontSize: '0.65rem', color: '#64748b'}}>(read-only)</span>
+                                                </div>
+                                                <p style={{fontSize: '0.875rem', color: '#d1fae5', lineHeight: 1.6, whiteSpace: 'pre-wrap'}}>{editingTicket.managerNotes}</p>
+                                                {editingTicket.resolvedAt && (
+                                                    <p style={{fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem'}}>
+                                                        Resolved: {editingTicket.resolvedAt.toDate ? editingTicket.resolvedAt.toDate().toLocaleString() : new Date(editingTicket.resolvedAt).toLocaleString()}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                        
+                                        {editingTicket.status === 'pending' && editingTicket.managerNotes && (
+                                            <div style={{marginTop: '1rem', padding: '1rem', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '8px'}}>
+                                                <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem'}}>
+                                                    <span style={{fontSize: '0.7rem', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.05em'}}>⏳ Pending — Manager Note</span>
+                                                    <span style={{fontSize: '0.65rem', color: '#64748b'}}>(read-only)</span>
+                                                </div>
+                                                <p style={{fontSize: '0.875rem', color: '#fcd34d', lineHeight: 1.6, whiteSpace: 'pre-wrap'}}>{editingTicket.managerNotes}</p>
+                                                {editingTicket.resolvedAt && (
+                                                    <p style={{fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem'}}>
+                                                        Marked pending: {editingTicket.resolvedAt.toDate ? editingTicket.resolvedAt.toDate().toLocaleString() : new Date(editingTicket.resolvedAt).toLocaleString()}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -2396,7 +2473,7 @@
                                             {displayTickets.map((ticket, idx) => (
                                                 <div
                                                     key={ticket.id}
-                                                    onClick={() => { setSelectedTicket(ticket); setManagerResolutionNotes(''); setManagerPendingNotes(''); setShowPendingInput(false); }}
+                                                    onClick={() => { setSelectedTicket(ticket); setManagerResolutionNotes(''); setManagerPendingNotes(''); setShowPendingInput(false); setResolutionError(''); }}
                                                     style={{
                                                         padding: '0.75rem 1rem',
                                                         borderBottom: '1px solid rgba(71,85,105,0.2)',
@@ -2489,13 +2566,13 @@
                                                             return (
                                                                 <>
                                                                     <button
-                                                                        onClick={() => { if(idx > 0){ setSelectedTicket(displayTickets[idx-1]); setManagerResolutionNotes(''); setManagerPendingNotes(''); setShowPendingInput(false); } }}
+                                                                        onClick={() => { if(idx > 0){ setSelectedTicket(displayTickets[idx-1]); setManagerResolutionNotes(''); setManagerPendingNotes(''); setShowPendingInput(false); setResolutionError(''); } }}
                                                                         disabled={idx <= 0}
                                                                         title="Previous ticket"
                                                                         style={{width:'28px',height:'28px',borderRadius:'6px',border:'1px solid rgba(71,85,105,0.5)',background:'rgba(71,85,105,0.3)',color:'#cbd5e1',fontSize:'13px',cursor:idx>0?'pointer':'default',opacity:idx>0?1:0.3,display:'flex',alignItems:'center',justifyContent:'center'}}
                                                                     >↑</button>
                                                                     <button
-                                                                        onClick={() => { if(idx < displayTickets.length-1){ setSelectedTicket(displayTickets[idx+1]); setManagerResolutionNotes(''); setManagerPendingNotes(''); setShowPendingInput(false); } }}
+                                                                        onClick={() => { if(idx < displayTickets.length-1){ setSelectedTicket(displayTickets[idx+1]); setManagerResolutionNotes(''); setManagerPendingNotes(''); setShowPendingInput(false); setResolutionError(''); } }}
                                                                         disabled={idx >= displayTickets.length-1}
                                                                         title="Next ticket"
                                                                         style={{width:'28px',height:'28px',borderRadius:'6px',border:'1px solid rgba(71,85,105,0.5)',background:'rgba(71,85,105,0.3)',color:'#cbd5e1',fontSize:'13px',cursor:idx<displayTickets.length-1?'pointer':'default',opacity:idx<displayTickets.length-1?1:0.3,display:'flex',alignItems:'center',justifyContent:'center'}}
@@ -2505,7 +2582,7 @@
                                                             );
                                                         })()}
                                                         <button
-                                                            onClick={() => deleteTicket(selectedTicket.id)}
+                                                            onClick={() => setDeleteConfirmTicket(selectedTicket)}
                                                             style={{padding:'4px 10px',borderRadius:'6px',border:'1px solid rgba(239,68,68,0.4)',background:'rgba(239,68,68,0.12)',color:'#fca5a5',fontSize:'0.7rem',cursor:'pointer',marginLeft:'4px'}}
                                                         >🗑️ Delete</button>
                                                     </div>
@@ -2567,16 +2644,24 @@
                                                 {/* Manager Actions */}
                                                 {(selectedTicket.status === 'escalated' || selectedTicket.status === 'pending') && (
                                                     <div style={{background:'rgba(30,41,59,0.8)',border:'1px solid rgba(71,85,105,0.5)',borderRadius:'8px',padding:'0.875rem'}}>
-                                                        <div style={{fontSize:'0.75rem',fontWeight:600,color:'#e2e8f0',marginBottom:'0.5rem'}}>Manager resolution notes</div>
-                                                        <textarea
-                                                            className="form-control"
-                                                            value={managerResolutionNotes}
-                                                            onChange={(e) => setManagerResolutionNotes(e.target.value)}
-                                                            placeholder="Describe the action taken or resolution…"
-                                                            rows="3"
-                                                            style={{width:'100%',minHeight:'70px',resize:'vertical',fontSize:'0.8rem',padding:'0.5rem 0.75rem'}}
-                                                        />
-                                                        <p style={{fontSize:'0.7rem',color:'#64748b',margin:'4px 0 10px'}}>Required to mark as resolved</p>
+                                                        {!showPendingInput && (
+                                                            <>
+                                                                <div style={{fontSize:'0.75rem',fontWeight:600,color:'#e2e8f0',marginBottom:'0.5rem'}}>Manager resolution notes</div>
+                                                                <textarea
+                                                                    className="form-control"
+                                                                    value={managerResolutionNotes}
+                                                                    onChange={(e) => { setManagerResolutionNotes(e.target.value); if (resolutionError) setResolutionError(''); }}
+                                                                    placeholder="Describe the action taken or resolution…"
+                                                                    rows="3"
+                                                                    style={{width:'100%',minHeight:'70px',resize:'vertical',fontSize:'0.8rem',padding:'0.5rem 0.75rem',border: resolutionError ? '1px solid #ef4444' : undefined}}
+                                                                />
+                                                                {resolutionError ? (
+                                                                    <p style={{fontSize:'0.7rem',color:'#f87171',margin:'4px 0 10px',fontWeight:600}}>⚠️ {resolutionError}</p>
+                                                                ) : (
+                                                                    <p style={{fontSize:'0.7rem',color:'#64748b',margin:'4px 0 10px'}}>Required to mark as resolved</p>
+                                                                )}
+                                                            </>
+                                                        )}
 
                                                         {/* Inline pending reason input — expands when Mark Pending clicked */}
                                                         {showPendingInput && (
@@ -2611,35 +2696,38 @@
                                                             </div>
                                                         )}
 
-                                                        <div style={{display:'flex',gap:'0.5rem'}}>
-                                                            <button
-                                                                className="btn btn-success"
-                                                                style={{flex:1,padding:'0.5rem',fontSize:'0.8rem'}}
-                                                                onClick={() => {
-                                                                    if (!managerResolutionNotes.trim()) {
-                                                                        alert('⚠️ Please enter resolution details before marking as resolved');
-                                                                        return;
-                                                                    }
-                                                                    updateTicketStatus(selectedTicket.id, 'resolved', managerResolutionNotes);
-                                                                    setManagerResolutionNotes('');
-                                                                    setShowPendingInput(false);
-                                                                    setManagerPendingNotes('');
-                                                                }}
-                                                            >✓ Mark resolved</button>
-                                                            {selectedTicket.status === 'escalated' ? (
+                                                        {!showPendingInput && (
+                                                            <div style={{display:'flex',gap:'0.5rem'}}>
                                                                 <button
-                                                                    className="btn btn-warning"
+                                                                    className="btn btn-success"
                                                                     style={{flex:1,padding:'0.5rem',fontSize:'0.8rem'}}
-                                                                    onClick={() => { setShowPendingInput(true); }}
-                                                                >⏳ Mark pending</button>
-                                                            ) : (
-                                                                <button
-                                                                    className="btn btn-danger"
-                                                                    style={{flex:1,padding:'0.5rem',fontSize:'0.8rem'}}
-                                                                    onClick={() => { setShowPendingInput(true); }}
-                                                                >⚠️ Re-escalate</button>
-                                                            )}
-                                                        </div>
+                                                                    onClick={() => {
+                                                                        if (!managerResolutionNotes.trim()) {
+                                                                            setResolutionError('Please enter resolution details before marking as resolved');
+                                                                            return;
+                                                                        }
+                                                                        setResolutionError('');
+                                                                        updateTicketStatus(selectedTicket.id, 'resolved', managerResolutionNotes);
+                                                                        setManagerResolutionNotes('');
+                                                                        setShowPendingInput(false);
+                                                                        setManagerPendingNotes('');
+                                                                    }}
+                                                                >✓ Mark resolved</button>
+                                                                {selectedTicket.status === 'escalated' ? (
+                                                                    <button
+                                                                        className="btn btn-warning"
+                                                                        style={{flex:1,padding:'0.5rem',fontSize:'0.8rem'}}
+                                                                        onClick={() => { setShowPendingInput(true); }}
+                                                                    >⏳ Mark pending</button>
+                                                                ) : (
+                                                                    <button
+                                                                        className="btn btn-danger"
+                                                                        style={{flex:1,padding:'0.5rem',fontSize:'0.8rem'}}
+                                                                        onClick={() => { setShowPendingInput(true); }}
+                                                                    >⚠️ Re-escalate</button>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
 
@@ -2657,6 +2745,77 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        {/* Delete Confirmation Modal */}
+                        {deleteConfirmTicket && (
+                            <div className="modal-overlay" onClick={() => setDeleteConfirmTicket(null)}>
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '480px'}}>
+                                    <div style={{display:'flex',alignItems:'center',gap:'0.75rem',marginBottom:'1.25rem'}}>
+                                        <div style={{width:'40px',height:'40px',borderRadius:'50%',background:'rgba(239,68,68,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.25rem'}}>⚠️</div>
+                                        <h2 style={{fontSize:'1.25rem',fontWeight:700,color:'#fff'}}>Delete this ticket?</h2>
+                                    </div>
+                                    
+                                    <p style={{fontSize:'0.875rem',color:'#94a3b8',lineHeight:1.6,marginBottom:'1rem'}}>
+                                        This will permanently delete the ticket from Firestore. This action cannot be undone.
+                                    </p>
+                                    
+                                    <div style={{background:'rgba(15,23,42,0.6)',border:'1px solid rgba(71,85,105,0.5)',borderRadius:'8px',padding:'0.875rem',marginBottom:'1.25rem'}}>
+                                        <div style={{display:'grid',gridTemplateColumns:'auto 1fr',rowGap:'0.5rem',columnGap:'0.875rem',fontSize:'0.8rem'}}>
+                                            <span style={{color:'#64748b',fontWeight:600}}>Order #</span>
+                                            <span style={{color:'#e2e8f0',fontWeight:600}}>#{deleteConfirmTicket.orderNumber || '—'}</span>
+                                            
+                                            <span style={{color:'#64748b',fontWeight:600}}>Agent</span>
+                                            <span style={{color:'#60a5fa',fontWeight:600}}>{deleteConfirmTicket.agentUsername || 'Unknown'}</span>
+                                            
+                                            <span style={{color:'#64748b',fontWeight:600}}>Status</span>
+                                            <span style={{color:'#e2e8f0',textTransform:'capitalize'}}>{deleteConfirmTicket.status || '—'}</span>
+                                            
+                                            <span style={{color:'#64748b',fontWeight:600}}>Country</span>
+                                            <span style={{color:'#e2e8f0'}}>{deleteConfirmTicket.country || '—'}</span>
+                                            
+                                            {deleteConfirmTicket.phoneNumber && (
+                                                <>
+                                                    <span style={{color:'#64748b',fontWeight:600}}>Phone</span>
+                                                    <span style={{color:'#e2e8f0'}}>{deleteConfirmTicket.phoneNumber}</span>
+                                                </>
+                                            )}
+                                            
+                                            <span style={{color:'#64748b',fontWeight:600}}>Created</span>
+                                            <span style={{color:'#e2e8f0'}}>{deleteConfirmTicket.timestamp ? new Date(deleteConfirmTicket.timestamp).toLocaleString() : 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style={{display:'flex',gap:'0.75rem'}}>
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={() => setDeleteConfirmTicket(null)}
+                                            style={{flex:1}}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            className="btn btn-danger"
+                                            onClick={() => deleteTicket(deleteConfirmTicket.id)}
+                                            style={{flex:1}}
+                                        >
+                                            🗑️ Delete permanently
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* Toast notifications */}
+                        {toasts.length > 0 && (
+                            <div className="toast-container">
+                                {toasts.map(t => (
+                                    <div key={t.id} className={`toast toast-${t.type}`}>
+                                        <span>{t.type === 'success' ? '✅' : t.type === 'error' ? '❌' : 'ℹ️'}</span>
+                                        <span>{t.message}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 );
             }
