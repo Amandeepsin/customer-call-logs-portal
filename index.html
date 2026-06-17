@@ -6,9 +6,11 @@
     <title>Customer Service Ticketing Portal</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Pinned versions — DO NOT switch back to floating "@18" or "@babel/standalone" without a version.
+         Floating CDN URLs auto-update and broke all portals when Babel changed the JSX runtime default. -->
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -481,7 +483,11 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
     </script>
-    <script type="text/babel">
+    <script type="text/babel" data-presets="env,react">
+        /** @jsxRuntime classic */
+        // ↑ Forces Babel to use classic JSX (React.createElement) instead of the
+        //   automatic runtime, which would inject `import { jsx } from "react/jsx-runtime"`
+        //   and break this non-module script. Do not remove.
         const { useState, useEffect } = React;
         
         const COUNTRIES = [
